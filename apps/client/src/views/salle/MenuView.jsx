@@ -1,7 +1,17 @@
 import React, { useState } from 'react';
 import { useRestobook } from '../../context/RestobookContext';
 import { MenuItemModal } from './MenuItemModal';
-import { Utensils, Plus, Pencil, Trash2, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
+import {
+  Utensils,
+  Plus,
+  Pencil,
+  Trash2,
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
+  Coins,
+  ChevronDown
+} from 'lucide-react';
 
 export const MenuView = () => {
   const {
@@ -10,14 +20,20 @@ export const MenuView = () => {
     addMenuItem,
     updateMenuItem,
     deleteMenuItem,
-    toggleItemAvailability
+    toggleItemAvailability,
+    currency,
+    changeCurrency,
+    formatPrice,
+    AVAILABLE_CURRENCIES
   } = useRestobook();
 
+  // Onglet sélectionné : 'cat_entrees' par défaut, ou 'all'
+  const [selectedCategoryTab, setSelectedCategoryTab] = useState('cat_entrees');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [itemToEdit, setItemToEdit] = useState(null);
   const [itemToDelete, setItemToDelete] = useState(null);
 
-  const handleOpenAdd = () => {
+  const handleOpenAdd = (defaultCatId) => {
     setItemToEdit(null);
     setIsModalOpen(true);
   };
@@ -42,49 +58,127 @@ export const MenuView = () => {
     }
   };
 
+  // Liste des catégories à afficher
+  const categoriesToDisplay = selectedCategoryTab === 'all'
+    ? menuCategories
+    : menuCategories.filter(cat => cat.id === selectedCategoryTab);
+
   return (
     <div className="flex-1 flex flex-col p-6 bg-slate-950 overflow-y-auto">
-      {/* En-tête */}
-      <div className="flex items-center justify-between pb-4 border-b border-slate-800 mb-6">
+      {/* En-tête : Titre + Sélecteur de Devise + Bouton Ajouter */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-800 mb-6">
         <div>
           <h2 className="text-xl font-bold flex items-center gap-2">
             <Utensils className="w-5 h-5 text-yellow-400" />
-            Gestion de la Carte & des Prix
+            Carte du Restaurant
           </h2>
           <p className="text-xs text-slate-400">
-            Ajoutez, modifiez ou retirez des plats et boissons en temps réel
+            Séparez vos Entrées, Plats, Boissons & Desserts et configurez la devise de votre choix
           </p>
         </div>
 
+        <div className="flex items-center gap-3">
+          {/* Sélecteur de Devise Monétaire */}
+          <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-2xl">
+            <Coins className="w-4 h-4 text-yellow-400" />
+            <span className="text-xs text-slate-400 font-medium">Devise :</span>
+            <select
+              value={currency.code}
+              onChange={(e) => {
+                const found = AVAILABLE_CURRENCIES.find(c => c.code === e.target.value);
+                if (found) changeCurrency(found);
+              }}
+              className="bg-slate-950 border border-slate-700 text-xs font-bold text-yellow-400 px-2.5 py-1 rounded-xl focus:outline-none focus:border-yellow-500 cursor-pointer"
+            >
+              {AVAILABLE_CURRENCIES.map(curr => (
+                <option key={curr.code} value={curr.code}>
+                  {curr.flag} {curr.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <button
+            onClick={() => handleOpenAdd(selectedCategoryTab !== 'all' ? selectedCategoryTab : 'cat_plats')}
+            className="flex items-center gap-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-black rounded-2xl text-xs shadow-lg shadow-yellow-500/20 transition-all active:scale-95 whitespace-nowrap"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Ajouter à la carte</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Onglets de séparation claire : Entrées, Plats, Boissons, Desserts */}
+      <div className="flex gap-2 pb-4 overflow-x-auto scrollbar-none border-b border-slate-800/80 mb-6">
+        {menuCategories.map(cat => {
+          const count = menuItems.filter(i => i.categoryId === cat.id).length;
+          const isSelected = selectedCategoryTab === cat.id;
+          return (
+            <button
+              key={cat.id}
+              onClick={() => setSelectedCategoryTab(cat.id)}
+              className={`flex items-center gap-2 px-5 py-3 rounded-2xl text-sm font-bold transition-all shadow-sm ${
+                isSelected
+                  ? 'bg-yellow-500 text-slate-950 shadow-yellow-500/20 scale-[1.02]'
+                  : 'bg-slate-900/90 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800'
+              }`}
+            >
+              <span className="text-lg">{cat.icon}</span>
+              <span>{cat.name}</span>
+              <span className={`text-xs px-2 py-0.5 rounded-full font-extrabold ${
+                isSelected ? 'bg-slate-950/20 text-slate-950' : 'bg-slate-800 text-slate-400'
+              }`}>
+                {count}
+              </span>
+            </button>
+          );
+        })}
+
+        {/* Bouton pour tout afficher d'un coup */}
         <button
-          onClick={handleOpenAdd}
-          className="flex items-center gap-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-black rounded-2xl text-xs shadow-lg shadow-yellow-500/20 transition-all active:scale-95"
+          onClick={() => setSelectedCategoryTab('all')}
+          className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all ${
+            selectedCategoryTab === 'all'
+              ? 'bg-yellow-500 text-slate-950 shadow-yellow-500/20'
+              : 'bg-slate-900/40 text-slate-400 hover:text-white border border-slate-800/60'
+          }`}
         >
-          <Plus className="w-4 h-4" />
-          <span>Ajouter un Plat ou une Boisson</span>
+          ✨ Tout afficher
         </button>
       </div>
 
-      {/* Catégories et articles */}
+      {/* Contenu des catégories filtrées */}
       <div className="space-y-6">
-        {menuCategories.map(cat => {
+        {categoriesToDisplay.map(cat => {
           const items = menuItems.filter(i => i.categoryId === cat.id);
           return (
-            <div key={cat.id} className="bg-slate-900/60 border border-slate-800 rounded-3xl p-5">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-base font-bold text-yellow-400 flex items-center gap-2">
-                  <span className="text-xl">{cat.icon}</span>
-                  <span>{cat.name}</span>
-                  <span className="text-xs text-slate-500 font-normal">({items.length} références)</span>
-                </h3>
+            <div key={cat.id} className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6">
+              <div className="flex justify-between items-center mb-5">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl p-2.5 bg-slate-950 rounded-2xl border border-slate-800">
+                    {cat.icon}
+                  </span>
+                  <div>
+                    <h3 className="text-lg font-bold text-white">{cat.name}</h3>
+                    <p className="text-xs text-slate-400">{items.length} référence(s) enregistrée(s)</p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => handleOpenAdd(cat.id)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold border border-slate-700 transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5 text-yellow-400" />
+                  <span>Ajouter dans {cat.name}</span>
+                </button>
               </div>
 
               {items.length === 0 ? (
-                <div className="text-center py-6 text-slate-500 text-xs">
-                  Aucun article dans cette catégorie pour le moment.
+                <div className="text-center py-8 bg-slate-950/50 rounded-2xl border border-dashed border-slate-800 text-slate-500 text-xs">
+                  Aucun article dans la section {cat.name}. Cliquez sur "+ Ajouter dans {cat.name}" pour commencer.
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {items.map(item => {
                     const isAvailable = item.isAvailable !== false;
                     return (
@@ -92,26 +186,26 @@ export const MenuView = () => {
                         key={item.id}
                         className={`p-4 bg-slate-950 rounded-2xl border transition-all flex flex-col justify-between group ${
                           isAvailable
-                            ? 'border-slate-800 hover:border-slate-700'
+                            ? 'border-slate-800 hover:border-slate-700 shadow-sm'
                             : 'border-red-900/40 bg-red-950/10 opacity-70'
                         }`}
                       >
                         <div>
                           <div className="flex justify-between items-start gap-2">
                             <h4 className="font-bold text-sm text-white">{item.name}</h4>
-                            <span className="font-black text-yellow-400 font-mono text-sm whitespace-nowrap">
-                              {Number(item.price).toFixed(2)} €
+                            <span className="font-black text-yellow-400 font-mono text-base whitespace-nowrap">
+                              {formatPrice(item.price)}
                             </span>
                           </div>
 
                           {item.description && (
-                            <p className="text-xs text-slate-400 mt-1 line-clamp-2">
+                            <p className="text-xs text-slate-400 mt-1.5 line-clamp-2">
                               {item.description}
                             </p>
                           )}
 
                           {item.allergens?.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-2">
+                            <div className="flex flex-wrap gap-1 mt-2.5">
                               {item.allergens.map((alg, aIdx) => (
                                 <span key={aIdx} className="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded">
                                   {alg}
@@ -122,22 +216,21 @@ export const MenuView = () => {
 
                           {item.modifierGroups?.some(g => g.id === 'cuisson') && (
                             <span className="inline-block mt-2 text-[10px] font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
-                              🔥 Choix cuisson disponible
+                              🔥 Cuisson au choix
                             </span>
                           )}
                         </div>
 
-                        {/* Barre d'actions sous chaque carte */}
-                        <div className="flex items-center justify-between pt-3 border-t border-slate-800/80 mt-3">
-                          {/* Bascule de disponibilité rapide */}
+                        {/* Actions : Rupture de stock, Éditer, Supprimer */}
+                        <div className="flex items-center justify-between pt-3 border-t border-slate-800/80 mt-4">
                           <button
                             onClick={() => toggleItemAvailability(item.id)}
-                            className={`flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-lg border transition-colors ${
+                            className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-xl border transition-colors ${
                               isAvailable
                                 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20'
                                 : 'bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20'
                             }`}
-                            title="Cliquer pour changer la disponibilité"
+                            title="Changer la disponibilité"
                           >
                             {isAvailable ? (
                               <>
@@ -147,12 +240,11 @@ export const MenuView = () => {
                             ) : (
                               <>
                                 <XCircle className="w-3.5 h-3.5" />
-                                <span>Rupture</span>
+                                <span>Épuisé</span>
                               </>
                             )}
                           </button>
 
-                          {/* Boutons Éditer & Supprimer */}
                           <div className="flex items-center gap-1">
                             <button
                               onClick={() => handleOpenEdit(item)}

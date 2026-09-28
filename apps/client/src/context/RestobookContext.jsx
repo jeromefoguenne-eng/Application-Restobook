@@ -7,12 +7,23 @@ const DEFAULT_SERVER_URL = window.location.hostname === 'localhost'
   ? 'ws://localhost:4001' 
   : `ws://${window.location.hostname}:4001`;
 
+export const AVAILABLE_CURRENCIES = [
+  { code: 'EUR', symbol: '€', name: 'Euro (€)', flag: '🇪🇺' },
+  { code: 'USD', symbol: '$', name: 'Dollar US ($)', flag: '🇺🇸' },
+  { code: 'GBP', symbol: '£', name: 'Livre Sterling (£)', flag: '🇬🇧' },
+  { code: 'CHF', symbol: 'CHF', name: 'Franc Suisse (CHF)', flag: '🇨🇭' },
+  { code: 'CAD', symbol: 'CA$', name: 'Dollar Canadien (CA$)', flag: '🇨🇦' },
+  { code: 'JPY', symbol: '¥', name: 'Yen Japonais (¥)', flag: '🇯🇵' },
+  { code: 'MAD', symbol: 'DH', name: 'Dirham Marocain (DH)', flag: '🇲🇦' }
+];
+
 export const RestobookProvider = ({ children }) => {
   const [activeMode, setActiveMode] = useState('duo'); // 'salle' | 'cuisine' | 'duo'
   const [sessionId, setSessionId] = useState('RESTO-LE-CENTRAL');
   const [pairingCode, setPairingCode] = useState('834912');
   const [connected, setConnected] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(false);
+  const [currency, setCurrency] = useState(AVAILABLE_CURRENCIES[0]);
 
   const [tables, setTables] = useState([]);
   const [tickets, setTickets] = useState([]);
@@ -81,16 +92,38 @@ export const RestobookProvider = ({ children }) => {
     switch (msg.type) {
       case 'SESSION_INITIALIZED':
         setTables(msg.payload.tables || []);
-        setTickets(msg.payload.tickets || []);
+        // Déduplication absolue des tickets par ID
+        const initialTickets = (msg.payload.tickets || []).filter(
+          (t, idx, self) => idx === self.findIndex(o => o.id === t.id)
+        );
+        setTickets(initialTickets);
         setMenuCategories(msg.payload.menuCategories || []);
         setMenuItems(msg.payload.menuItems || []);
         setReservations(msg.payload.reservations || []);
         setActiveAlarms(msg.payload.activeAlarms || []);
         if (msg.payload.pairingCode) setPairingCode(msg.payload.pairingCode);
+        if (msg.payload.currency) {
+          const match = AVAILABLE_CURRENCIES.find(c => c.code === msg.payload.currency.code);
+          setCurrency(match || msg.payload.currency);
+        }
+        break;
+
+      case 'CURRENCY_CHANGED':
+        if (msg.payload.currency) {
+          const match = AVAILABLE_CURRENCIES.find(c => c.code === msg.payload.currency.code);
+          setCurrency(match || msg.payload.currency);
+        }
         break;
 
       case 'ORDER_CREATED':
-        setTickets(prev => [...prev, msg.payload.ticket]);
+        setTickets(prev => {
+          const newTicket = msg.payload.ticket;
+          if (!newTicket) return prev;
+          if (prev.some(t => t.id === newTicket.id)) {
+            return prev.map(t => t.id === newTicket.id ? newTicket : t);
+          }
+          return [...prev, newTicket];
+        });
         if (msg.payload.tables) setTables(msg.payload.tables);
         soundEngine.playOrderSentTone();
         break;
@@ -219,6 +252,19 @@ export const RestobookProvider = ({ children }) => {
     sendWs('TOGGLE_ITEM_AVAILABILITY', { itemId });
   };
 
+  const changeCurrency = (newCurrency) => {
+    setCurrency(newCurrency);
+    sendWs('CHANGE_CURRENCY', { currency: newCurrency });
+  };
+
+  const formatPrice = (amount) => {
+    const val = Number(amount || 0).toFixed(2);
+    if (['USD', 'CAD', 'GBP', 'JPY'].includes(currency.code)) {
+      return `${currency.symbol}${val}`;
+    }
+    return `${val} ${currency.symbol}`;
+  };
+
   return (
     <RestobookContext.Provider
       value={{
@@ -248,7 +294,11 @@ export const RestobookProvider = ({ children }) => {
         addMenuItem,
         updateMenuItem,
         deleteMenuItem,
-        toggleItemAvailability
+        toggleItemAvailability,
+        currency,
+        changeCurrency,
+        formatPrice,
+        AVAILABLE_CURRENCIES
       }}
     >
       {children}

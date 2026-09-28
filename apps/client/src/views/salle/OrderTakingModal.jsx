@@ -3,7 +3,7 @@ import { useRestobook } from '../../context/RestobookContext';
 import { X, Send, Plus, Minus, Trash2, Receipt, CheckCircle, BellRing } from 'lucide-react';
 
 export const OrderTakingModal = ({ table, onClose, onOpenBilling }) => {
-  const { menuCategories, menuItems, createOrder, activeAlarms, acknowledgeOrder, tickets } = useRestobook();
+  const { menuCategories, menuItems, createOrder, activeAlarms, acknowledgeOrder, tickets, formatPrice } = useRestobook();
   const [selectedCategory, setSelectedCategory] = useState(menuCategories[0]?.id || 'cat_entrees');
   const [coursePhase, setCoursePhase] = useState('main'); // 'direct' | 'starter' | 'main' | 'dessert'
   const [cartItems, setCartItems] = useState([]);
@@ -230,7 +230,7 @@ export const OrderTakingModal = ({ table, onClose, onOpenBilling }) => {
                     </div>
                     <div className="flex items-center justify-between mt-3 pt-2 border-t border-slate-800/80">
                       <span className="text-sm font-extrabold text-yellow-400">
-                        {item.price.toFixed(2)} €
+                        {formatPrice(item.price)}
                       </span>
                       {isAvailable && (
                         <span className="w-7 h-7 rounded-xl bg-slate-800 text-slate-300 group-hover:bg-yellow-500 group-hover:text-slate-950 flex items-center justify-center font-bold text-xs transition-colors">
@@ -269,7 +269,7 @@ export const OrderTakingModal = ({ table, onClose, onOpenBilling }) => {
                     <div className="flex items-start justify-between gap-2">
                       <span className="text-xs font-bold text-white flex-1">{it.name}</span>
                       <span className="text-xs font-extrabold text-yellow-400 shrink-0">
-                        {(it.unitPrice * it.quantity).toFixed(2)} €
+                        {formatPrice(it.unitPrice * it.quantity)}
                       </span>
                     </div>
 
@@ -315,7 +315,7 @@ export const OrderTakingModal = ({ table, onClose, onOpenBilling }) => {
             <div className="pt-3 border-t border-slate-800 space-y-3">
               <div className="flex items-center justify-between px-1">
                 <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Commande</span>
-                <span className="text-2xl font-black text-white">{totalAmount.toFixed(2)} €</span>
+                <span className="text-2xl font-black text-white">{formatPrice(totalAmount)}</span>
               </div>
 
               <button

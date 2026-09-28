@@ -70,9 +70,9 @@ export const mockTables = [
 
 export const mockMenuCategories = [
   { id: 'cat_entrees', name: 'Entrées', order: 1, icon: '🥗' },
-  { id: 'cat_plats', name: 'Plats Chauds', order: 2, icon: '🥩' },
-  { id: 'cat_desserts', name: 'Desserts', order: 3, icon: '🍰' },
-  { id: 'cat_boissons', name: 'Boissons & Vins', order: 4, icon: '🍷' }
+  { id: 'cat_plats', name: 'Plats', order: 2, icon: '🥩' },
+  { id: 'cat_boissons', name: 'Boissons', order: 3, icon: '🍷' },
+  { id: 'cat_desserts', name: 'Desserts', order: 4, icon: '🍰' }
 ];
 
 export const mockMenuItems = [

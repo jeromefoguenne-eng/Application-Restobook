@@ -30,6 +30,7 @@ function getOrCreateSession(sessionId = 'RESTO-DEMO') {
           notes: 'Anniversaire de mariage'
         }
       ],
+      currency: { code: 'EUR', symbol: '€', name: 'Euro (€)' },
       tickets: [],
       activeAlarms: [],
       clients: new Set()
@@ -146,16 +147,11 @@ wss.on('connection', (ws) => {
 
           currentSession.tickets.push(ticket);
 
-          // Diffusion temps réel à tous les clients (notamment la Cuisine)
+          // Diffusion temps réel à tous les clients (notamment la Cuisine et la Salle)
           broadcastToSession(currentSession, {
             type: RestobookEventType.ORDER_CREATED,
             payload: { ticket, tables: currentSession.tables }
           });
-          // Confirmation à l'expéditeur
-          ws.send(JSON.stringify({
-            type: RestobookEventType.ORDER_CREATED,
-            payload: { ticket, tables: currentSession.tables }
-          }));
           break;
         }
 
@@ -189,7 +185,6 @@ wss.on('connection', (ws) => {
                 type: 'TICKET_UPDATED',
                 payload: { ticket }
               });
-              ws.send(JSON.stringify({ type: 'TICKET_UPDATED', payload: { ticket } }));
             }
           }
           break;
@@ -231,10 +226,6 @@ wss.on('connection', (ws) => {
               type: RestobookEventType.ORDER_READY,
               payload: alarmPayload
             });
-            ws.send(JSON.stringify({
-              type: RestobookEventType.ORDER_READY,
-              payload: alarmPayload
-            }));
           }
           break;
         }
@@ -265,10 +256,6 @@ wss.on('connection', (ws) => {
             type: RestobookEventType.ORDER_ACKNOWLEDGED,
             payload: ackPayload
           });
-          ws.send(JSON.stringify({
-            type: RestobookEventType.ORDER_ACKNOWLEDGED,
-            payload: ackPayload
-          }));
           break;
         }
 
@@ -315,10 +302,6 @@ wss.on('connection', (ws) => {
             type: 'RESERVATION_ADDED',
             payload: { reservation, reservations: currentSession.reservations }
           });
-          ws.send(JSON.stringify({
-            type: 'RESERVATION_ADDED',
-            payload: { reservation, reservations: currentSession.reservations }
-          }));
           break;
         }
 
@@ -335,10 +318,6 @@ wss.on('connection', (ws) => {
             type: 'MENU_UPDATED',
             payload: { menuItems: currentSession.menuItems }
           });
-          ws.send(JSON.stringify({
-            type: 'MENU_UPDATED',
-            payload: { menuItems: currentSession.menuItems }
-          }));
           break;
         }
 
@@ -353,10 +332,6 @@ wss.on('connection', (ws) => {
               type: 'MENU_UPDATED',
               payload: { menuItems: currentSession.menuItems }
             });
-            ws.send(JSON.stringify({
-              type: 'MENU_UPDATED',
-              payload: { menuItems: currentSession.menuItems }
-            }));
           }
           break;
         }
@@ -370,10 +345,6 @@ wss.on('connection', (ws) => {
             type: 'MENU_UPDATED',
             payload: { menuItems: currentSession.menuItems }
           });
-          ws.send(JSON.stringify({
-            type: 'MENU_UPDATED',
-            payload: { menuItems: currentSession.menuItems }
-          }));
           break;
         }
 
@@ -388,11 +359,19 @@ wss.on('connection', (ws) => {
               type: 'MENU_UPDATED',
               payload: { menuItems: currentSession.menuItems }
             });
-            ws.send(JSON.stringify({
-              type: 'MENU_UPDATED',
-              payload: { menuItems: currentSession.menuItems }
-            }));
           }
+          break;
+        }
+
+        // Changement de devise monétaire du restaurant
+        case 'CHANGE_CURRENCY': {
+          if (!currentSession) return;
+          const { currency } = msg.payload;
+          currentSession.currency = currency;
+          broadcastToSession(currentSession, {
+            type: 'CURRENCY_CHANGED',
+            payload: { currency }
+          });
           break;
         }
 

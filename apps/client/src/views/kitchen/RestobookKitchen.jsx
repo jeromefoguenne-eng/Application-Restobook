@@ -56,9 +56,15 @@ export const RestobookKitchen = () => {
     return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
   };
 
-  // Séparer les tickets actifs et terminés
-  const activeTickets = tickets.filter(t => t.status !== 'ready' && t.status !== 'archived');
-  const completedTickets = tickets.filter(t => t.status === 'ready' || t.status === 'archived');
+  // Séparer les tickets actifs et terminés avec déduplication stricte par ID
+  const uniqueTicketsMap = new Map();
+  tickets.forEach(t => {
+    if (t && t.id) uniqueTicketsMap.set(t.id, t);
+  });
+  const allUniqueTickets = Array.from(uniqueTicketsMap.values());
+
+  const activeTickets = allUniqueTickets.filter(t => t.status !== 'ready' && t.status !== 'archived');
+  const completedTickets = allUniqueTickets.filter(t => t.status === 'ready' || t.status === 'archived');
 
   // Glisser-déposer pour réordonnancement des priorités
   const handleDragStart = (e, ticketId) => {

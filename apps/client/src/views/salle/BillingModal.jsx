@@ -4,7 +4,7 @@ import { X, CreditCard, Banknote, Ticket, Check, Users, Printer } from 'lucide-r
 import confetti from 'canvas-confetti';
 
 export const BillingModal = ({ table, onClose }) => {
-  const { tickets, closeTableBill } = useRestobook();
+  const { tickets, closeTableBill, formatPrice, currency } = useRestobook();
   const [splitCount, setSplitCount] = useState(1);
   const [selectedMethod, setSelectedMethod] = useState('card');
   const [cashGiven, setCashGiven] = useState('');
@@ -58,7 +58,7 @@ export const BillingModal = ({ table, onClose }) => {
                   {it.quantity}x {it.name || it.itemName}
                 </span>
                 <span className="font-bold font-mono text-white">
-                  {((it.unitPrice || 0) * (it.quantity || 1)).toFixed(2)} €
+                  {formatPrice((it.unitPrice || 0) * (it.quantity || 1))}
                 </span>
               </div>
             ))
@@ -73,7 +73,7 @@ export const BillingModal = ({ table, onClose }) => {
         <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-3 mb-4">
           <div className="flex justify-between items-center">
             <span className="text-sm font-bold text-slate-400">Montant Total TTC</span>
-            <span className="text-2xl font-black text-white font-mono">{totalAmount.toFixed(2)} €</span>
+            <span className="text-2xl font-black text-white font-mono">{formatPrice(totalAmount)}</span>
           </div>
 
           <div className="flex items-center justify-between pt-2 border-t border-slate-800/80">
@@ -101,7 +101,7 @@ export const BillingModal = ({ table, onClose }) => {
           {splitCount > 1 && (
             <div className="flex justify-between items-center text-xs pt-2 border-t border-slate-800/80 text-yellow-400 font-bold">
               <span>Par personne ({splitCount} parts) :</span>
-              <span className="font-mono text-base">{splitAmount.toFixed(2)} €</span>
+              <span className="font-mono text-base">{formatPrice(splitAmount)}</span>
             </div>
           )}
         </div>
@@ -137,7 +137,9 @@ export const BillingModal = ({ table, onClose }) => {
 
           {selectedMethod === 'cash' && (
             <div className="pt-2">
-              <label className="text-xs text-slate-400 block mb-1">Montant remis en espèces (€) :</label>
+              <label className="text-xs text-slate-400 block mb-1">
+                Montant remis en espèces ({currency.symbol}) :
+              </label>
               <input
                 type="number"
                 value={cashGiven}
@@ -147,7 +149,7 @@ export const BillingModal = ({ table, onClose }) => {
               />
               {changeToReturn > 0 && (
                 <p className="text-xs font-bold text-emerald-400 mt-1">
-                  Rendu monnaie : {changeToReturn.toFixed(2)} €
+                  Rendu monnaie : {formatPrice(changeToReturn)}
                 </p>
               )}
             </div>
