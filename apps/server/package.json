@@ -1,0 +1,15 @@
+{
+  "name": "@restobook/cloud-server",
+  "version": "1.0.0",
+  "description": "Serveur Cloud temps réel de synchronisation Salle & Cuisine avec appairage QR code",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "author": "Jérôme Foguenne",
+  "license": "MIT"
+}

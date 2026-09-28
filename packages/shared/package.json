@@ -1,0 +1,13 @@
+{
+  "name": "@restobook/shared",
+  "version": "1.0.0",
+  "description": "Modèles de données, contrats d'événements et types partagés pour Restobook",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  },
+  "keywords": ["restaurant", "pos", "kds", "shared"],
+  "author": "Jérôme Foguenne",
+  "license": "MIT"
+}

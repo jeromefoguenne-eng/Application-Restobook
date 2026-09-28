@@ -1,0 +1,33 @@
+{
+  "name": "restobook-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Système connecté Salle & Cuisine pour tablettes Android",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "type": "module",
+  "scripts": {
+    "dev": "node start-restobook.js",
+    "server": "node apps/server/server.js",
+    "client": "npm --prefix apps/client run dev",
+    "build": "npm --prefix apps/client run build",
+    "test": "node --test packages/shared/tests/*.test.js"
+  },
+  "author": "Jérôme Foguenne",
+  "license": "MIT",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jeromefoguenne-eng/Application-Restobook.git"
+  },
+  "keywords": [],
+  "bugs": {
+    "url": "https://github.com/jeromefoguenne-eng/Application-Restobook/issues"
+  },
+  "homepage": "https://github.com/jeromefoguenne-eng/Application-Restobook#readme"
+}
