@@ -4,7 +4,7 @@ import { X, CreditCard, Banknote, Ticket, Check, Users, Printer } from 'lucide-r
 import confetti from 'canvas-confetti';
 
 export const BillingModal = ({ table, onClose }) => {
-  const { tickets, closeTableBill, formatPrice, currency } = useRestobook();
+  const { tickets, closeTableBill, formatPrice, currency, restaurantName } = useRestobook();
   const [splitCount, setSplitCount] = useState(1);
   const [selectedMethod, setSelectedMethod] = useState('card');
   const [cashGiven, setCashGiven] = useState('');
@@ -38,6 +38,9 @@ export const BillingModal = ({ table, onClose }) => {
         
         <div className="flex items-center justify-between pb-4 border-b border-slate-800">
           <div>
+            <span className="text-[11px] font-bold text-yellow-400 uppercase tracking-wider block">
+              {restaurantName}
+            </span>
             <h2 className="text-xl font-bold">Addition Table {table.number}</h2>
             <p className="text-xs text-slate-400">Facturation & Encaissement</p>
           </div>

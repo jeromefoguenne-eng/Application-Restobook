@@ -24,6 +24,7 @@ export const RestobookProvider = ({ children }) => {
   const [connected, setConnected] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(false);
   const [currency, setCurrency] = useState(AVAILABLE_CURRENCIES[0]);
+  const [restaurantName, setRestaurantName] = useState('Bistrot Le Central');
 
   const [tables, setTables] = useState([]);
   const [tickets, setTickets] = useState([]);
@@ -102,10 +103,15 @@ export const RestobookProvider = ({ children }) => {
         setReservations(msg.payload.reservations || []);
         setActiveAlarms(msg.payload.activeAlarms || []);
         if (msg.payload.pairingCode) setPairingCode(msg.payload.pairingCode);
+        if (msg.payload.name) setRestaurantName(msg.payload.name);
         if (msg.payload.currency) {
           const match = AVAILABLE_CURRENCIES.find(c => c.code === msg.payload.currency.code);
           setCurrency(match || msg.payload.currency);
         }
+        break;
+
+      case 'RESTAURANT_NAME_UPDATED':
+        if (msg.payload.name) setRestaurantName(msg.payload.name);
         break;
 
       case 'CURRENCY_CHANGED':
@@ -257,6 +263,13 @@ export const RestobookProvider = ({ children }) => {
     sendWs('CHANGE_CURRENCY', { currency: newCurrency });
   };
 
+  const changeRestaurantName = (newName) => {
+    const trimmed = newName.trim();
+    if (!trimmed) return;
+    setRestaurantName(trimmed);
+    sendWs('UPDATE_RESTAURANT_NAME', { name: trimmed });
+  };
+
   const formatPrice = (amount) => {
     const val = Number(amount || 0).toFixed(2);
     if (['USD', 'CAD', 'GBP', 'JPY'].includes(currency.code)) {
@@ -298,7 +311,9 @@ export const RestobookProvider = ({ children }) => {
         currency,
         changeCurrency,
         formatPrice,
-        AVAILABLE_CURRENCIES
+        AVAILABLE_CURRENCIES,
+        restaurantName,
+        changeRestaurantName
       }}
     >
       {children}

@@ -3,6 +3,7 @@ import { useRestobook } from './context/RestobookContext';
 import { RestobookSalle } from './views/salle/RestobookSalle';
 import { RestobookKitchen } from './views/kitchen/RestobookKitchen';
 import { PairingModal } from './components/PairingModal';
+import { EditRestaurantNameModal } from './components/EditRestaurantNameModal';
 import {
   Tablet,
   ChefHat,
@@ -11,7 +12,9 @@ import {
   Wifi,
   Volume2,
   UtensilsCrossed,
-  Sparkles
+  Sparkles,
+  Store,
+  Pencil
 } from 'lucide-react';
 
 export function App() {
@@ -20,12 +23,14 @@ export function App() {
     setActiveMode,
     connected,
     sessionId,
+    restaurantName,
     enableSound,
     soundEnabled,
     activeAlarms
   } = useRestobook();
 
   const [isPairingOpen, setIsPairingOpen] = useState(false);
+  const [isEditNameOpen, setIsEditNameOpen] = useState(false);
 
   return (
     <div className="flex flex-col h-screen w-screen bg-slate-950 text-slate-100 overflow-hidden">
@@ -39,10 +44,18 @@ export function App() {
             </span>
           </div>
 
-          <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 bg-slate-950 rounded-xl border border-slate-800 text-[11px] text-slate-400 font-mono">
-            <span>Session:</span>
-            <strong className="text-white">{sessionId}</strong>
-          </div>
+          {/* Bouton Nom du Restaurant modifiable */}
+          <button
+            onClick={() => setIsEditNameOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1 bg-slate-950/80 hover:bg-slate-800 border border-slate-800 hover:border-yellow-500/40 rounded-xl transition-all group"
+            title="Cliquer pour changer le nom du restaurant"
+          >
+            <Store className="w-3.5 h-3.5 text-yellow-400" />
+            <span className="text-xs font-bold text-white group-hover:text-yellow-400 transition-colors">
+              {restaurantName}
+            </span>
+            <Pencil className="w-3 h-3 text-slate-500 group-hover:text-yellow-400 transition-colors" />
+          </button>
         </div>
 
         {/* Sélecteur de vue (Tablette Salle / Tablette Cuisine / Duo Côte-à-Côte) */}
@@ -144,6 +157,9 @@ export function App() {
 
       {/* Modal d'Appairage QR Code */}
       <PairingModal isOpen={isPairingOpen} onClose={() => setIsPairingOpen(false)} />
+
+      {/* Modal de Modification du Nom du Restaurant */}
+      <EditRestaurantNameModal isOpen={isEditNameOpen} onClose={() => setIsEditNameOpen(false)} />
     </div>
   );
 }

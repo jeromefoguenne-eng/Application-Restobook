@@ -375,6 +375,18 @@ wss.on('connection', (ws) => {
           break;
         }
 
+        // Changement de nom du restaurant
+        case 'UPDATE_RESTAURANT_NAME': {
+          if (!currentSession) return;
+          const { name } = msg.payload;
+          currentSession.name = name;
+          broadcastToSession(currentSession, {
+            type: 'RESTAURANT_NAME_UPDATED',
+            payload: { name }
+          });
+          break;
+        }
+
         default:
           console.warn('Unknown message type:', msg.type);
       }
