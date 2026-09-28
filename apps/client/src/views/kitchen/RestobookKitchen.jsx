@@ -10,7 +10,9 @@ import {
   Check,
   RotateCcw,
   Sparkles,
-  Volume2
+  Volume2,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 export const RestobookKitchen = () => {
@@ -91,6 +93,18 @@ export const RestobookKitchen = () => {
       reorderTickets(newOrder);
     }
     setDraggedTicketId(null);
+  };
+
+  const moveTicket = (ticketId, direction) => {
+    const currentOrder = activeTickets.map(t => t.id);
+    const index = currentOrder.indexOf(ticketId);
+    if (index === -1) return;
+    const newIndex = direction === 'left' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= currentOrder.length) return;
+    const newOrder = [...currentOrder];
+    const [moved] = newOrder.splice(index, 1);
+    newOrder.splice(newIndex, 0, moved);
+    reorderTickets(newOrder);
   };
 
   return (
@@ -192,10 +206,32 @@ export const RestobookKitchen = () => {
                   </div>
                 </div>
 
-                {/* Chronomètre d'attente */}
-                <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border font-mono text-sm ${urgencyStyle}`}>
-                  <Clock className="w-4 h-4" />
-                  <span>{getElapsedTime(ticket.createdAt)}</span>
+                <div className="flex items-center gap-2">
+                  {/* Flèches de réorganisation tactile (tablette/smartphone) */}
+                  <div className="flex items-center bg-slate-900 rounded-xl border border-slate-800 p-0.5">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); moveTicket(ticket.id, 'left'); }}
+                      disabled={index === 0}
+                      className="p-1 rounded-lg text-slate-400 hover:text-white disabled:opacity-20 disabled:pointer-events-none transition-colors"
+                      title="Prioriser vers la gauche"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); moveTicket(ticket.id, 'right'); }}
+                      disabled={index === activeTickets.length - 1}
+                      className="p-1 rounded-lg text-slate-400 hover:text-white disabled:opacity-20 disabled:pointer-events-none transition-colors"
+                      title="Déplacer vers la droite"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {/* Chronomètre d'attente */}
+                  <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border font-mono text-xs font-bold ${urgencyStyle}`}>
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>{getElapsedTime(ticket.createdAt)}</span>
+                  </div>
                 </div>
               </div>
 

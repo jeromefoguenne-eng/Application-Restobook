@@ -1,0 +1,8 @@
+{
+  "appId": "com.restobook.app",
+  "appName": "Restobook",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  }
+}

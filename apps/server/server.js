@@ -1,7 +1,27 @@
 import http from 'http';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { WebSocketServer, WebSocket } from 'ws';
 import { mockTables, mockMenuItems, mockMenuCategories } from '../../packages/shared/src/mocks/seedData.js';
 import { TableStatus, TicketStatus, ItemStatus, RestobookEventType } from '../../packages/shared/src/types.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const DIST_DIR = path.resolve(__dirname, '../client/dist');
+
+const MIME_TYPES = {
+  '.html': 'text/html; charset=utf-8',
+  '.js': 'application/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.svg': 'image/svg+xml',
+  '.ico': 'image/x-icon',
+  '.woff2': 'font/woff2',
+  '.webmanifest': 'application/manifest+json'
+};
 
 const PORT = process.env.PORT || 4001;
 
@@ -66,6 +86,23 @@ const server = http.createServer((req, res) => {
     const { clients, ...safeSession } = session;
     res.end(JSON.stringify(safeSession));
     return;
+  }
+
+  // Servir les fichiers statiques de l'application Web PWA (dist)
+  if (fs.existsSync(DIST_DIR)) {
+    let cleanPath = url.pathname.replace(/^\/+/, '');
+    let filePath = path.join(DIST_DIR, cleanPath === '' ? 'index.html' : cleanPath);
+    if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
+      filePath = path.join(DIST_DIR, 'index.html');
+    }
+
+    if (fs.existsSync(filePath)) {
+      const ext = path.extname(filePath).toLowerCase();
+      const contentType = MIME_TYPES[ext] || 'application/octet-stream';
+      res.writeHead(200, { 'Content-Type': contentType });
+      fs.createReadStream(filePath).pipe(res);
+      return;
+    }
   }
 
   res.writeHead(404, { 'Content-Type': 'application/json' });

@@ -43,6 +43,44 @@ export const FloorPlanCanvas = ({ onSelectTable }) => {
     setDraggedTableId(null);
   };
 
+  // Support tactile natif pour tablettes et smartphones
+  const touchOffsetRef = useRef({ x: 0, y: 0 });
+
+  const handleTouchStart = (e, tableId) => {
+    if (!isEditMode || !canvasRef.current) return;
+    const touch = e.touches[0];
+    const tableEl = e.currentTarget;
+    const rect = tableEl.getBoundingClientRect();
+    touchOffsetRef.current = {
+      x: touch.clientX - rect.left,
+      y: touch.clientY - rect.top
+    };
+    setDraggedTableId(tableId);
+  };
+
+  const handleTouchMove = (e) => {
+    if (!isEditMode || !draggedTableId || !canvasRef.current) return;
+    const touch = e.touches[0];
+    const canvasRect = canvasRef.current.getBoundingClientRect();
+    const rawX = touch.clientX - canvasRect.left - touchOffsetRef.current.x;
+    const rawY = touch.clientY - canvasRect.top - touchOffsetRef.current.y;
+
+    const snapX = Math.max(10, Math.min(canvasRect.width - 90, Math.round(rawX / 20) * 20));
+    const snapY = Math.max(10, Math.min(canvasRect.height - 90, Math.round(rawY / 20) * 20));
+
+    const updated = tables.map(t => {
+      if (t.id === draggedTableId) {
+        return { ...t, positionX: snapX, positionY: snapY };
+      }
+      return t;
+    });
+    updateTableLayout(updated);
+  };
+
+  const handleTouchEnd = () => {
+    setDraggedTableId(null);
+  };
+
   // Ajout rapide d'une nouvelle table
   const handleAddTable = (shape = 'square', capacity = 4) => {
     const newNumber = (tables.length + 1).toString();
@@ -195,6 +233,8 @@ export const FloorPlanCanvas = ({ onSelectTable }) => {
         ref={canvasRef}
         onDragOver={handleDragOver}
         onDrop={handleDrop}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
         className={`relative flex-1 rounded-2xl border transition-colors overflow-hidden ${
           isEditMode
             ? 'bg-slate-900/60 border-yellow-500/40 bg-[radial-gradient(#334155_1px,transparent_1px)] [background-size:20px_20px]'
@@ -217,6 +257,7 @@ export const FloorPlanCanvas = ({ onSelectTable }) => {
               key={table.id}
               draggable={isEditMode}
               onDragStart={(e) => handleDragStart(e, table.id)}
+              onTouchStart={(e) => handleTouchStart(e, table.id)}
               onClick={() => !isEditMode && onSelectTable(table)}
               style={{
                 left: `${table.positionX || 50}px`,

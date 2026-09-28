@@ -13,6 +13,7 @@ export const OrderTakingModal = ({ table, onClose, onOpenBilling }) => {
 
   const isAlarming = activeAlarms.includes(table.id);
   const tableTickets = tickets.filter(t => t.tableId === table.id);
+  const [mobileTab, setMobileTab] = useState('menu'); // 'menu' | 'cart'
 
   // Filtrer les articles par catégorie sélectionnée
   const filteredItems = menuItems.filter(item => item.categoryId === selectedCategory);
@@ -151,10 +152,41 @@ export const OrderTakingModal = ({ table, onClose, onOpenBilling }) => {
           </div>
         </div>
 
-        {/* Corps scindé en 2 colonnes : Catalogue à gauche (65%), Ticket à droite (35%) */}
+        {/* Onglets mobile smartphone : Bascule Carte / Panier */}
+        <div className="md:hidden flex bg-slate-950 p-2 border-b border-slate-800 gap-2 shrink-0">
+          <button
+            onClick={() => setMobileTab('menu')}
+            className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${
+              mobileTab === 'menu'
+                ? 'bg-yellow-500 text-slate-950 shadow-md shadow-yellow-500/20'
+                : 'bg-slate-900 text-slate-400'
+            }`}
+          >
+            🍽️ Carte des Plats
+          </button>
+          <button
+            onClick={() => setMobileTab('cart')}
+            className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+              mobileTab === 'cart'
+                ? 'bg-yellow-500 text-slate-950 shadow-md shadow-yellow-500/20'
+                : 'bg-slate-900 text-slate-400'
+            }`}
+          >
+            <span>🛒 Ticket ({cartItems.length})</span>
+            {cartItems.length > 0 && (
+              <span className="font-mono font-black text-[11px] bg-slate-950/20 px-1.5 py-0.5 rounded">
+                {formatPrice(totalAmount)}
+              </span>
+            )}
+          </button>
+        </div>
+
+        {/* Corps scindé : Plein écran ou Côte-à-côte */}
         <div className="flex-1 flex overflow-hidden">
           {/* Colonne gauche : Catalogue de plats */}
-          <div className="flex-1 flex flex-col border-r border-slate-800 p-4 overflow-hidden">
+          <div className={`flex-1 flex-col border-r border-slate-800 p-4 overflow-hidden ${
+            mobileTab === 'menu' ? 'flex' : 'hidden md:flex'
+          }`}>
             {/* Sélecteur de temps de service (Phase) */}
             <div className="flex items-center gap-2 mb-3 bg-slate-950 p-1.5 rounded-2xl border border-slate-800">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-2">Envoi :</span>
@@ -245,7 +277,9 @@ export const OrderTakingModal = ({ table, onClose, onOpenBilling }) => {
           </div>
 
           {/* Colonne droite : Bon / Ticket en cours */}
-          <div className="w-80 md:w-96 flex flex-col bg-slate-950/90 p-4">
+          <div className={`w-full md:w-88 lg:w-96 flex-col bg-slate-950/90 p-4 ${
+            mobileTab === 'cart' ? 'flex' : 'hidden md:flex'
+          }`}>
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
               <h3 className="font-bold text-sm text-slate-200">Ticket en cours</h3>
               <span className="text-xs text-slate-400">{cartItems.length} article(s)</span>
