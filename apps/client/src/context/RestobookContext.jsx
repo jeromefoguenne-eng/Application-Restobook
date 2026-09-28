@@ -1,11 +1,23 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { soundEngine } from '../utils/soundEngine';
+import { mockTables, mockMenuItems, mockMenuCategories } from '../../../../packages/shared/src/mocks/seedData.js';
 
 const RestobookContext = createContext(null);
 
-const DEFAULT_SERVER_URL = window.location.hostname === 'localhost' 
-  ? 'ws://localhost:4001' 
-  : `ws://${window.location.hostname}:4001`;
+const getHostUrl = () => {
+  try {
+    if (typeof window === 'undefined' || !window.location) return 'localhost';
+    const host = window.location.hostname;
+    if (!host || host === 'localhost' || window.location.protocol === 'file:') {
+      return 'localhost';
+    }
+    return host;
+  } catch (e) {
+    return 'localhost';
+  }
+};
+
+const DEFAULT_SERVER_URL = `ws://${getHostUrl()}:4001`;
 
 export const AVAILABLE_CURRENCIES = [
   { code: 'EUR', symbol: '€', name: 'Euro (€)', flag: '🇪🇺' },
@@ -26,11 +38,23 @@ export const RestobookProvider = ({ children }) => {
   const [currency, setCurrency] = useState(AVAILABLE_CURRENCIES[0]);
   const [restaurantName, setRestaurantName] = useState('Bistrot Le Central');
 
-  const [tables, setTables] = useState([]);
+  const [tables, setTables] = useState(() => JSON.parse(JSON.stringify(mockTables || [])));
   const [tickets, setTickets] = useState([]);
-  const [menuCategories, setMenuCategories] = useState([]);
-  const [menuItems, setMenuItems] = useState([]);
-  const [reservations, setReservations] = useState([]);
+  const [menuCategories, setMenuCategories] = useState(() => JSON.parse(JSON.stringify(mockMenuCategories || [])));
+  const [menuItems, setMenuItems] = useState(() => JSON.parse(JSON.stringify(mockMenuItems || [])));
+  const [reservations, setReservations] = useState([
+    {
+      id: 'res_1',
+      customerName: 'Dupont Marc',
+      phone: '+33 6 12 34 56 78',
+      guests: 4,
+      time: '20:00',
+      service: 'soir',
+      tableId: 'table_2',
+      status: 'confirmed',
+      notes: 'Anniversaire de mariage'
+    }
+  ]);
   const [activeAlarms, setActiveAlarms] = useState([]);
   const [latestAlarm, setLatestAlarm] = useState(null);
 
