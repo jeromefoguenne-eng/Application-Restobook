@@ -143,6 +143,10 @@ export const RestobookProvider = ({ children }) => {
         setReservations(msg.payload.reservations);
         break;
 
+      case 'MENU_UPDATED':
+        if (msg.payload.menuItems) setMenuItems(msg.payload.menuItems);
+        break;
+
       default:
         break;
     }
@@ -199,6 +203,22 @@ export const RestobookProvider = ({ children }) => {
     sendWs('ADD_RESERVATION', reservation);
   };
 
+  const addMenuItem = (itemData) => {
+    sendWs('ADD_MENU_ITEM', itemData);
+  };
+
+  const updateMenuItem = (itemData) => {
+    sendWs('UPDATE_MENU_ITEM', { item: itemData });
+  };
+
+  const deleteMenuItem = (itemId) => {
+    sendWs('DELETE_MENU_ITEM', { itemId });
+  };
+
+  const toggleItemAvailability = (itemId) => {
+    sendWs('TOGGLE_ITEM_AVAILABILITY', { itemId });
+  };
+
   return (
     <RestobookContext.Provider
       value={{
@@ -224,7 +244,11 @@ export const RestobookProvider = ({ children }) => {
         acknowledgeOrder,
         updateTableLayout,
         closeTableBill,
-        addReservation
+        addReservation,
+        addMenuItem,
+        updateMenuItem,
+        deleteMenuItem,
+        toggleItemAvailability
       }}
     >
       {children}

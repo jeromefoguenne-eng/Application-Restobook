@@ -322,6 +322,80 @@ wss.on('connection', (ws) => {
           break;
         }
 
+        // Ajout d'un plat ou d'une boisson à la carte
+        case 'ADD_MENU_ITEM': {
+          if (!currentSession) return;
+          const newItem = {
+            id: `item_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+            ...msg.payload,
+            isAvailable: msg.payload.isAvailable !== false
+          };
+          currentSession.menuItems.push(newItem);
+          broadcastToSession(currentSession, {
+            type: 'MENU_UPDATED',
+            payload: { menuItems: currentSession.menuItems }
+          });
+          ws.send(JSON.stringify({
+            type: 'MENU_UPDATED',
+            payload: { menuItems: currentSession.menuItems }
+          }));
+          break;
+        }
+
+        // Modification d'un plat / boisson existant
+        case 'UPDATE_MENU_ITEM': {
+          if (!currentSession) return;
+          const { item } = msg.payload;
+          const idx = currentSession.menuItems.findIndex(i => i.id === item.id);
+          if (idx > -1) {
+            currentSession.menuItems[idx] = { ...currentSession.menuItems[idx], ...item };
+            broadcastToSession(currentSession, {
+              type: 'MENU_UPDATED',
+              payload: { menuItems: currentSession.menuItems }
+            });
+            ws.send(JSON.stringify({
+              type: 'MENU_UPDATED',
+              payload: { menuItems: currentSession.menuItems }
+            }));
+          }
+          break;
+        }
+
+        // Suppression d'un plat / boisson de la carte
+        case 'DELETE_MENU_ITEM': {
+          if (!currentSession) return;
+          const { itemId } = msg.payload;
+          currentSession.menuItems = currentSession.menuItems.filter(i => i.id !== itemId);
+          broadcastToSession(currentSession, {
+            type: 'MENU_UPDATED',
+            payload: { menuItems: currentSession.menuItems }
+          });
+          ws.send(JSON.stringify({
+            type: 'MENU_UPDATED',
+            payload: { menuItems: currentSession.menuItems }
+          }));
+          break;
+        }
+
+        // Bascule de rupture de stock / disponibilité en temps réel
+        case 'TOGGLE_ITEM_AVAILABILITY': {
+          if (!currentSession) return;
+          const { itemId } = msg.payload;
+          const item = currentSession.menuItems.find(i => i.id === itemId);
+          if (item) {
+            item.isAvailable = item.isAvailable === false ? true : false;
+            broadcastToSession(currentSession, {
+              type: 'MENU_UPDATED',
+              payload: { menuItems: currentSession.menuItems }
+            });
+            ws.send(JSON.stringify({
+              type: 'MENU_UPDATED',
+              payload: { menuItems: currentSession.menuItems }
+            }));
+          }
+          break;
+        }
+
         default:
           console.warn('Unknown message type:', msg.type);
       }

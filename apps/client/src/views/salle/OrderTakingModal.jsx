@@ -198,32 +198,49 @@ export const OrderTakingModal = ({ table, onClose, onOpenBilling }) => {
 
             {/* Grille des articles du menu */}
             <div className="flex-1 overflow-y-auto grid grid-cols-2 md:grid-cols-3 gap-3 pr-1 pt-2">
-              {filteredItems.map(item => (
-                <button
-                  key={item.id}
-                  onClick={() => handleAddItem(item)}
-                  className="flex flex-col justify-between p-3.5 bg-slate-950/80 hover:bg-slate-800/80 border border-slate-800 hover:border-yellow-500/40 rounded-2xl text-left transition-all active:scale-[0.98] shadow-sm group"
-                >
-                  <div>
-                    <h4 className="text-sm font-bold text-white group-hover:text-yellow-400 transition-colors line-clamp-2">
-                      {item.name}
-                    </h4>
-                    {item.description && (
-                      <p className="text-[11px] text-slate-400 line-clamp-2 mt-1">
-                        {item.description}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex items-center justify-between mt-3 pt-2 border-t border-slate-800/80">
-                    <span className="text-sm font-extrabold text-yellow-400">
-                      {item.price.toFixed(2)} €
-                    </span>
-                    <span className="w-7 h-7 rounded-xl bg-slate-800 text-slate-300 group-hover:bg-yellow-500 group-hover:text-slate-950 flex items-center justify-center font-bold text-xs transition-colors">
-                      +
-                    </span>
-                  </div>
-                </button>
-              ))}
+              {filteredItems.map(item => {
+                const isAvailable = item.isAvailable !== false;
+                return (
+                  <button
+                    key={item.id}
+                    disabled={!isAvailable}
+                    onClick={() => handleAddItem(item)}
+                    className={`flex flex-col justify-between p-3.5 border rounded-2xl text-left transition-all shadow-sm ${
+                      isAvailable
+                        ? 'bg-slate-950/80 hover:bg-slate-800/80 border-slate-800 hover:border-yellow-500/40 active:scale-[0.98] group'
+                        : 'bg-red-950/10 border-red-900/30 opacity-50 cursor-not-allowed'
+                    }`}
+                  >
+                    <div>
+                      <div className="flex justify-between items-start gap-1">
+                        <h4 className={`text-sm font-bold line-clamp-2 ${isAvailable ? 'text-white group-hover:text-yellow-400' : 'text-slate-400 line-through'}`}>
+                          {item.name}
+                        </h4>
+                        {!isAvailable && (
+                          <span className="text-[9px] bg-red-600/30 text-red-400 px-1.5 py-0.5 rounded font-bold uppercase shrink-0">
+                            Épuisé
+                          </span>
+                        )}
+                      </div>
+                      {item.description && (
+                        <p className="text-[11px] text-slate-400 line-clamp-2 mt-1">
+                          {item.description}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between mt-3 pt-2 border-t border-slate-800/80">
+                      <span className="text-sm font-extrabold text-yellow-400">
+                        {item.price.toFixed(2)} €
+                      </span>
+                      {isAvailable && (
+                        <span className="w-7 h-7 rounded-xl bg-slate-800 text-slate-300 group-hover:bg-yellow-500 group-hover:text-slate-950 flex items-center justify-center font-bold text-xs transition-colors">
+                          +
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
