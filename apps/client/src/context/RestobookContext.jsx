@@ -546,6 +546,13 @@ export const RestobookProvider = ({ children }) => {
     broadcastAction('TABLES_LAYOUT_UPDATED', { tables: newTables });
   };
 
+  const deleteTable = (tableId) => {
+    const updated = tables.filter(t => t.id !== tableId);
+    setTables(updated);
+    saveRestoState({ tables: updated });
+    broadcastAction('TABLES_LAYOUT_UPDATED', { tables: updated });
+  };
+
   const closeTableBill = (tableId) => {
     const updatedTables = tables.map(t => {
       if (t.id === tableId) {
@@ -663,6 +670,7 @@ export const RestobookProvider = ({ children }) => {
         markOrderReady,
         acknowledgeOrder,
         updateTableLayout,
+        deleteTable,
         closeTableBill,
         addReservation,
         addMenuItem,

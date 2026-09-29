@@ -1,9 +1,9 @@
 import React, { useState, useRef } from 'react';
 import { useRestobook } from '../../context/RestobookContext';
-import { Plus, Move, Check, Users, Sparkles, AlertCircle, RotateCw } from 'lucide-react';
+import { Plus, Move, Check, Users, Sparkles, AlertCircle, RotateCw, Trash2 } from 'lucide-react';
 
 export const FloorPlanCanvas = ({ onSelectTable }) => {
-  const { tables, updateTableLayout, activeAlarms } = useRestobook();
+  const { tables, updateTableLayout, deleteTable, activeAlarms } = useRestobook();
   const [isEditMode, setIsEditMode] = useState(false);
   const [draggedTableId, setDraggedTableId] = useState(null);
   const canvasRef = useRef(null);
@@ -109,6 +109,17 @@ export const FloorPlanCanvas = ({ onSelectTable }) => {
       return t;
     });
     updateTableLayout(updated);
+  };
+
+  const handleDeleteTable = (table, e) => {
+    e.stopPropagation();
+    const hasActiveOrders = table.status === 'occupied' || table.status === 'order_sent' || table.status === 'ready' || table.status === 'bill_requested';
+    if (hasActiveOrders) {
+      if (!window.confirm(`Attention : La table T${table.number} a une commande en cours ou est occupée. Confirmer la suppression ?`)) {
+        return;
+      }
+    }
+    deleteTable(table.id);
   };
 
   // Obtenir la couleur et l'animation selon le statut de la table
@@ -242,8 +253,12 @@ export const FloorPlanCanvas = ({ onSelectTable }) => {
         }`}
       >
         {isEditMode && (
-          <div className="absolute top-3 left-3 pointer-events-none bg-yellow-500/10 border border-yellow-500/20 px-3 py-1.5 rounded-lg text-xs font-medium text-yellow-400">
-            ✋ Glissez les tables pour les réorganiser. Cliquez sur 🔄 pour pivoter.
+          <div className="absolute top-3 left-3 pointer-events-none bg-yellow-500/10 border border-yellow-500/20 px-3 py-1.5 rounded-lg text-xs font-medium text-yellow-400 flex items-center gap-2">
+            <span>✋ Déplacez les tables au doigt/souris</span>
+            <span>•</span>
+            <span>🔄 Pivoter</span>
+            <span>•</span>
+            <span>🗑️ Supprimer</span>
           </div>
         )}
 
@@ -271,15 +286,25 @@ export const FloorPlanCanvas = ({ onSelectTable }) => {
                 table.shape === 'round' ? 'rounded-full' : 'rounded-2xl'
               } ${style.bg}`}
             >
-              {/* Bouton de rotation en mode édition */}
+              {/* Boutons d'action en mode édition : Rotation & Suppression */}
               {isEditMode && (
-                <button
-                  onClick={(e) => rotateTable(table.id, e)}
-                  className="absolute -top-2 -right-2 p-1 bg-yellow-500 text-slate-950 rounded-full shadow hover:bg-yellow-400 z-10"
-                  title="Pivoter à 45°"
-                >
-                  <RotateCw className="w-3 h-3" />
-                </button>
+                <>
+                  <button
+                    onClick={(e) => handleDeleteTable(table, e)}
+                    className="absolute -top-2 -left-2 p-1.5 bg-red-600 hover:bg-red-500 text-white rounded-full shadow-lg hover:scale-110 active:scale-95 transition-all z-20"
+                    title={`Supprimer la table T${table.number}`}
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+
+                  <button
+                    onClick={(e) => rotateTable(table.id, e)}
+                    className="absolute -top-2 -right-2 p-1.5 bg-yellow-500 hover:bg-yellow-400 text-slate-950 rounded-full shadow-lg hover:scale-110 active:scale-95 transition-all z-20"
+                    title="Pivoter à 45°"
+                  >
+                    <RotateCw className="w-3 h-3" />
+                  </button>
+                </>
               )}
 
               {/* Numéro de table */}
