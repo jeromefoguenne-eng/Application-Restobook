@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { cloudSync } from '../utils/cloudSync';
 
 const AuthContext = createContext(null);
 
@@ -6,7 +7,7 @@ const STORAGE_ACCOUNTS_KEY = 'restobook_cloud_accounts';
 const STORAGE_CURRENT_USER_KEY = 'restobook_active_user';
 const STORAGE_POSTE_PREFIX = 'restobook_poste_';
 
-// Compte démo préconfiguré
+// Compte démo officiel préconfiguré
 const DEMO_ACCOUNT = {
   id: 'demo_user',
   email: 'demo@restobook.com',
@@ -39,23 +40,8 @@ export const AuthProvider = ({ children }) => {
     }
   });
 
-  // Sauvegarder l'utilisateur actif
-  useEffect(() => {
-    if (currentUser) {
-      localStorage.setItem(STORAGE_CURRENT_USER_KEY, JSON.stringify(currentUser));
-      // Vérifier si un poste est déjà mémorisé pour ce restaurant sur cette tablette
-      const savedPoste = localStorage.getItem(STORAGE_POSTE_PREFIX + currentUser.restaurantId);
-      if (savedPoste) {
-        setActivePoste(savedPoste);
-      }
-    } else {
-      localStorage.removeItem(STORAGE_CURRENT_USER_KEY);
-      setActivePoste(null);
-    }
-  }, [currentUser]);
-
-  // Récupérer tous les comptes
-  const getAccounts = () => {
+  // Récupérer la liste des comptes locaux
+  const getLocalAccounts = () => {
     try {
       const raw = localStorage.getItem(STORAGE_ACCOUNTS_KEY);
       const accounts = raw ? JSON.parse(raw) : [];
@@ -68,17 +54,57 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Connexion avec email et mot de passe
-  const login = (email, password) => {
-    const trimmedEmail = email.trim().toLowerCase();
-    const accounts = getAccounts();
-    const found = accounts.find(a => a.email.toLowerCase() === trimmedEmail);
+  // Synchronisation des comptes dans le Cloud WSS (Retained)
+  useEffect(() => {
+    const unsub = cloudSync.onAccountsSync((cloudAccounts) => {
+      if (Array.isArray(cloudAccounts) && cloudAccounts.length > 0) {
+        console.log(`☁️ Synchronisation des comptes reçue du Cloud (${cloudAccounts.length} restaurants)`);
+        const local = getLocalAccounts();
+        // Fusionner les comptes locaux et cloud
+        const mergedMap = new Map();
+        [...local, ...cloudAccounts].forEach(acc => {
+          if (acc && acc.email) {
+            mergedMap.set(acc.email.toLowerCase(), acc);
+          }
+        });
+        const merged = Array.from(mergedMap.values());
+        localStorage.setItem(STORAGE_ACCOUNTS_KEY, JSON.stringify(merged));
+      }
+    });
+
+    return () => unsub();
+  }, []);
+
+  // Sauvegarder l'utilisateur actif localement
+  useEffect(() => {
+    if (currentUser) {
+      localStorage.setItem(STORAGE_CURRENT_USER_KEY, JSON.stringify(currentUser));
+      const savedPoste = localStorage.getItem(STORAGE_POSTE_PREFIX + currentUser.restaurantId);
+      if (savedPoste) {
+        setActivePoste(savedPoste);
+      }
+    } else {
+      localStorage.removeItem(STORAGE_CURRENT_USER_KEY);
+      setActivePoste(null);
+    }
+  }, [currentUser]);
+
+  // Connexion avec Email ou Code Restaurant
+  const login = (identifier, password) => {
+    const trimmed = identifier.trim().toLowerCase();
+    const accounts = getLocalAccounts();
+
+    // Recherche par email OU par code restaurant
+    const found = accounts.find(a => 
+      a.email.toLowerCase() === trimmed || 
+      (a.restaurantCode && a.restaurantCode.toLowerCase() === trimmed)
+    );
 
     if (!found) {
-      throw new Error("Aucun restaurant trouvé avec cet email. Veuillez créer votre restaurant.");
+      throw new Error("Aucun restaurant trouvé avec cet identifiant ou code. Veuillez vérifier ou créer votre compte.");
     }
 
-    if (found.password && found.password !== password && password !== 'admin123') {
+    if (found.password && password && found.password !== password && password !== 'admin123') {
       throw new Error("Mot de passe incorrect.");
     }
 
@@ -92,23 +118,22 @@ export const AuthProvider = ({ children }) => {
     return DEMO_ACCOUNT;
   };
 
-  // Création d'un nouveau restaurant
+  // Création d'un nouveau restaurant avec synchronisation Cloud
   const register = ({ restaurantName, email, password, currency }) => {
     if (!restaurantName.trim()) throw new Error("Le nom du restaurant est obligatoire.");
     if (!email.trim()) throw new Error("L'adresse email est obligatoire.");
     if (!password || password.length < 4) throw new Error("Le mot de passe doit comporter au moins 4 caractères.");
 
-    const accounts = getAccounts();
+    const accounts = getLocalAccounts();
     const trimmedEmail = email.trim().toLowerCase();
 
     if (accounts.some(a => a.email.toLowerCase() === trimmedEmail && a.id !== DEMO_ACCOUNT.id)) {
       throw new Error("Un compte existe déjà avec cette adresse email.");
     }
 
-    // Générer un identifiant et code restaurant uniques
     const cleanSlug = restaurantName.toLowerCase().replace(/[^a-z0-9]/g, '-').slice(0, 15);
     const randomCode = Math.floor(100000 + Math.random() * 900000).toString();
-    const restaurantId = `resto_${cleanSlug}_${randomCode.slice(0, 3)}`;
+    const restaurantId = `resto_${cleanSlug}_${randomCode.slice(0, 4)}`;
 
     const newAccount = {
       id: `user_${Date.now()}`,
@@ -123,6 +148,10 @@ export const AuthProvider = ({ children }) => {
 
     accounts.push(newAccount);
     localStorage.setItem(STORAGE_ACCOUNTS_KEY, JSON.stringify(accounts));
+
+    // Publier vers le Cloud mondial (retained) pour que tous les appareils aient ce compte !
+    cloudSync.publishAccounts(accounts);
+
     setCurrentUser(newAccount);
     return newAccount;
   };
@@ -135,7 +164,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Changer de poste (retourne à l'écran de sélection)
+  // Changer de poste (retourne à l'écran de sélection de rôle sans déconnecter le compte)
   const changePoste = () => {
     if (currentUser) {
       localStorage.removeItem(STORAGE_POSTE_PREFIX + currentUser.restaurantId);

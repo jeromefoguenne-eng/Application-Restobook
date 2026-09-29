@@ -136,17 +136,18 @@ export const AuthView = () => {
           {tab === 'login' && (
             <form onSubmit={handleLogin} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1.5">
-                  Adresse Email
+                <label className="block text-xs font-bold text-slate-300 mb-1.5 flex items-center justify-between">
+                  <span>Adresse Email ou Code Restaurant</span>
+                  <span className="text-[10px] text-amber-400 font-semibold">Ex: CENTRAL-2026</span>
                 </label>
                 <div className="relative">
                   <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
-                    type="email"
+                    type="text"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="exemple@mon-restaurant.com"
+                    placeholder="contact@resto.com ou CODE-1234"
                     className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white outline-none transition-colors"
                   />
                 </div>
@@ -154,13 +155,12 @@ export const AuthView = () => {
 
               <div>
                 <label className="block text-xs font-bold text-slate-300 mb-1.5">
-                  Mot de passe
+                  Mot de passe (ou laissez vide avec code)
                 </label>
                 <div className="relative">
                   <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
                     type="password"
-                    required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"

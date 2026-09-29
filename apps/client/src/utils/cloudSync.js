@@ -1,10 +1,16 @@
 import mqtt from 'mqtt';
 
+const GLOBAL_ACCOUNTS_TOPIC = 'restobook/cloud/v1/accounts/registry';
+
 export class CloudSyncService {
   constructor() {
     this.client = null;
-    this.topic = null;
+    this.currentRestaurantId = null;
+    this.eventsTopic = null;
+    this.stateTopic = null;
     this.callbacks = new Set();
+    this.accountCallbacks = new Set();
+    this.stateCallbacks = new Set();
     this.statusCallbacks = new Set();
     this.isConnected = false;
     this.broadcastChannel = null;
@@ -13,22 +19,25 @@ export class CloudSyncService {
       this.broadcastChannel = new BroadcastChannel('restobook_channel');
       this.broadcastChannel.onmessage = (event) => {
         if (event.data) {
-          this.notifyCallbacks(event.data, 'broadcast');
+          if (event.data.channelType === 'accounts') {
+            this.notifyAccountCallbacks(event.data.payload);
+          } else if (event.data.channelType === 'state') {
+            this.notifyStateCallbacks(event.data.payload);
+          } else {
+            this.notifyCallbacks(event.data, 'broadcast');
+          }
         }
       };
     }
+
+    // Démarrer la connexion Cloud globale dès le lancement
+    this.initMqtt();
   }
 
-  connect(restaurantId) {
-    if (this.client) {
-      try { this.client.end(true); } catch (e) {}
-    }
+  initMqtt() {
+    if (this.client) return;
 
-    this.topic = `restobook/v1/${restaurantId}/events`;
-    const syncReqTopic = `restobook/v1/${restaurantId}/sync_req`;
-    const syncResTopic = `restobook/v1/${restaurantId}/sync_res`;
-
-    // Broker mondial public WSS gratuit et pérenne
+    // Broker mondial public WSS gratuit, pérenne et illimité
     const brokerUrl = 'wss://broker.emqx.io:8084/mqtt';
 
     try {
@@ -36,25 +45,45 @@ export class CloudSyncService {
         clientId: `restobook_${Math.random().toString(16).substring(2, 10)}`,
         clean: true,
         reconnectPeriod: 3000,
-        connectTimeout: 5000
+        connectTimeout: 7000
       });
 
       this.client.on('connect', () => {
         this.isConnected = true;
         this.notifyStatus(true);
-        this.client.subscribe([this.topic, syncReqTopic, syncResTopic], (err) => {
-          if (!err) {
-            console.log(`📡 Restobook Cloud Realtime connecté sur le topic: ${this.topic}`);
-          }
-        });
+        console.log('📡 Restobook Cloud connecté au réseau mondial WSS');
+
+        // S'abonner au registre mondial des comptes pour synchroniser les connexions sur tous les appareils
+        this.client.subscribe(GLOBAL_ACCOUNTS_TOPIC, { qos: 1 });
+
+        // Si un restaurant est déjà sélectionné, s'abonner à ses topics
+        if (this.currentRestaurantId) {
+          this.subscribeRestaurantTopics(this.currentRestaurantId);
+        }
       });
 
       this.client.on('message', (topic, message) => {
         try {
-          const payload = JSON.parse(message.toString());
-          this.notifyCallbacks(payload, 'mqtt');
+          const raw = message.toString();
+          if (!raw) return;
+          const parsed = JSON.parse(raw);
+
+          // 1. Registre des comptes
+          if (topic === GLOBAL_ACCOUNTS_TOPIC) {
+            this.notifyAccountCallbacks(parsed);
+            return;
+          }
+
+          // 2. État persistant du restaurant (retained)
+          if (topic.endsWith('/state')) {
+            this.notifyStateCallbacks(parsed);
+            return;
+          }
+
+          // 3. Événements temps réel (commandes, alarmes, sonnettes)
+          this.notifyCallbacks(parsed, 'mqtt');
         } catch (err) {
-          console.error('Erreur parsing MQTT:', err);
+          console.warn('Erreur lecture message Cloud:', err);
         }
       });
 
@@ -64,31 +93,83 @@ export class CloudSyncService {
       });
 
       this.client.on('error', (err) => {
-        console.warn('MQTT Connection Notice:', err.message);
+        console.warn('Notice Cloud WSS:', err?.message || err);
         this.isConnected = false;
         this.notifyStatus(false);
       });
     } catch (e) {
-      console.warn('MQTT init error:', e);
-      this.isConnected = false;
-      this.notifyStatus(false);
+      console.warn('Initialisation Cloud WSS différée:', e);
     }
   }
 
+  // Connexion à l'espace d'un restaurant spécifique
+  connectRestaurant(restaurantId) {
+    this.currentRestaurantId = restaurantId;
+    if (this.isConnected && this.client) {
+      this.subscribeRestaurantTopics(restaurantId);
+    }
+  }
+
+  subscribeRestaurantTopics(restaurantId) {
+    this.eventsTopic = `restobook/cloud/v1/restaurants/${restaurantId}/events`;
+    this.stateTopic = `restobook/cloud/v1/restaurants/${restaurantId}/state`;
+
+    this.client.subscribe([this.eventsTopic, this.stateTopic], { qos: 1 }, (err) => {
+      if (!err) {
+        console.log(`📡 Abonné aux topics du restaurant [${restaurantId}]`);
+      }
+    });
+  }
+
+  // Publier la mise à jour des comptes sur le Cloud pour tous les appareils (retained)
+  publishAccounts(accountsList) {
+    if (this.broadcastChannel) {
+      try {
+        this.broadcastChannel.postMessage({ channelType: 'accounts', payload: accountsList });
+      } catch (e) {}
+    }
+
+    if (this.client && this.isConnected) {
+      try {
+        this.client.publish(GLOBAL_ACCOUNTS_TOPIC, JSON.stringify(accountsList), { retain: true, qos: 1 });
+      } catch (e) {
+        console.warn('Erreur publish comptes:', e);
+      }
+    }
+  }
+
+  // Publier l'état complet du projet restaurant sur le Cloud (retained)
+  publishProjectState(restaurantId, state) {
+    const topic = `restobook/cloud/v1/restaurants/${restaurantId}/state`;
+
+    if (this.broadcastChannel) {
+      try {
+        this.broadcastChannel.postMessage({ channelType: 'state', payload: state });
+      } catch (e) {}
+    }
+
+    if (this.client && this.isConnected) {
+      try {
+        this.client.publish(topic, JSON.stringify(state), { retain: true, qos: 1 });
+      } catch (e) {
+        console.warn('Erreur sauvegarde Cloud projet:', e);
+      }
+    }
+  }
+
+  // Publier un événement temps réel (commande, alarme, etc.)
   publish(data) {
-    // 1. Envoyer en BroadcastChannel local (multi-onglets instantané)
     if (this.broadcastChannel) {
       try {
         this.broadcastChannel.postMessage(data);
       } catch (e) {}
     }
 
-    // 2. Envoyer sur le Cloud Realtime mondial WSS
-    if (this.client && this.isConnected && this.topic) {
+    if (this.client && this.isConnected && this.eventsTopic) {
       try {
-        this.client.publish(this.topic, JSON.stringify(data), { qos: 0 });
+        this.client.publish(this.eventsTopic, JSON.stringify(data), { qos: 0 });
       } catch (e) {
-        console.warn('Publish error:', e);
+        console.warn('Erreur émission événement Cloud:', e);
       }
     }
   }
@@ -96,6 +177,16 @@ export class CloudSyncService {
   onMessage(callback) {
     this.callbacks.add(callback);
     return () => this.callbacks.delete(callback);
+  }
+
+  onAccountsSync(callback) {
+    this.accountCallbacks.add(callback);
+    return () => this.accountCallbacks.delete(callback);
+  }
+
+  onStateSync(callback) {
+    this.stateCallbacks.add(callback);
+    return () => this.stateCallbacks.delete(callback);
   }
 
   onStatusChange(callback) {
@@ -110,6 +201,18 @@ export class CloudSyncService {
     }
   }
 
+  notifyAccountCallbacks(accounts) {
+    for (const cb of this.accountCallbacks) {
+      try { cb(accounts); } catch (e) { console.error(e); }
+    }
+  }
+
+  notifyStateCallbacks(state) {
+    for (const cb of this.stateCallbacks) {
+      try { cb(state); } catch (e) { console.error(e); }
+    }
+  }
+
   notifyStatus(status) {
     for (const cb of this.statusCallbacks) {
       try { cb(status); } catch (e) {}
@@ -117,12 +220,10 @@ export class CloudSyncService {
   }
 
   disconnect() {
-    if (this.client) {
-      try { this.client.end(true); } catch (e) {}
-      this.client = null;
-    }
-    this.isConnected = false;
-    this.notifyStatus(false);
+    // Ne pas déconnecter le client global afin de maintenir la synchronisation des comptes
+    this.currentRestaurantId = null;
+    this.eventsTopic = null;
+    this.stateTopic = null;
   }
 }
 

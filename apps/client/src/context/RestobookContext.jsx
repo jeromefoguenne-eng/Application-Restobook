@@ -75,7 +75,7 @@ export const RestobookProvider = ({ children }) => {
     }
   }, [activePoste]);
 
-  // Sauvegarder l'état du restaurant en localStorage
+  // Sauvegarder l'état du restaurant en localStorage ET dans le Cloud (retained)
   const saveRestoState = (updates = {}) => {
     const rId = currentUser?.restaurantId || sessionId;
     try {
@@ -88,7 +88,11 @@ export const RestobookProvider = ({ children }) => {
         restaurantName: updates.restaurantName !== undefined ? updates.restaurantName : restaurantName,
         currency: updates.currency !== undefined ? updates.currency : currency
       };
+      // 1. Sauvegarde locale (offline-first)
       localStorage.setItem(`restobook_state_${rId}`, JSON.stringify(stateToSave));
+
+      // 2. Sauvegarde persistante dans le Cloud mondial (retained) pour TOUS les appareils
+      cloudSync.publishProjectState(rId, stateToSave);
     } catch (e) {
       console.warn('LocalStorage save error:', e);
     }
@@ -355,11 +359,33 @@ export const RestobookProvider = ({ children }) => {
       console.warn('Erreur lecture cache local restaurant:', e);
     }
 
-    // Connexion au Cloud Realtime mondial WSS
-    cloudSync.connect(currentRestoId);
+    // Connexion au Cloud Realtime mondial WSS pour ce restaurant
+    cloudSync.connectRestaurant(currentRestoId);
 
     const unsubStatus = cloudSync.onStatusChange((status) => {
       setCloudConnected(status);
+    });
+
+    // Réception de l'état persistant complet envoyé par le Cloud WSS (retained)
+    const unsubState = cloudSync.onStateSync((cloudState) => {
+      if (!cloudState) return;
+      console.log(`☁️ État du restaurant synchronisé depuis le Cloud pour [${currentRestoId}]`);
+      if (cloudState.tables) setTables(cloudState.tables);
+      if (cloudState.tickets) {
+        const uniqueTickets = (cloudState.tickets || []).filter(
+          (t, idx, self) => idx === self.findIndex(o => o.id === t.id)
+        );
+        setTickets(uniqueTickets);
+      }
+      if (cloudState.menuCategories) setMenuCategories(cloudState.menuCategories);
+      if (cloudState.menuItems) setMenuItems(cloudState.menuItems);
+      if (cloudState.reservations) setReservations(cloudState.reservations);
+      if (cloudState.restaurantName) setRestaurantName(cloudState.restaurantName);
+      if (cloudState.currency) setCurrency(cloudState.currency);
+
+      try {
+        localStorage.setItem(`restobook_state_${currentRestoId}`, JSON.stringify(cloudState));
+      } catch (e) {}
     });
 
     const unsubMsg = cloudSync.onMessage((msg) => {
@@ -371,15 +397,9 @@ export const RestobookProvider = ({ children }) => {
       handleServerMessage(msg);
     });
 
-    // Demander une synchronisation aux autres tablettes éventuellement déjà en ligne
-    cloudSync.publish({
-      type: 'REQUEST_FULL_SYNC',
-      restaurantId: currentRestoId,
-      senderId: clientIdRef.current
-    });
-
     return () => {
       unsubStatus();
+      unsubState();
       unsubMsg();
       cloudSync.disconnect();
     };
