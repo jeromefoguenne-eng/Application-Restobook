@@ -5,12 +5,13 @@ import { OrderTakingModal } from './OrderTakingModal';
 import { BillingModal } from './BillingModal';
 import { ReservationsView } from './ReservationsView';
 import { MenuView } from './MenuView';
+import { BillingHistoryView } from './BillingHistoryView';
 import { AlarmBanner } from '../../components/AlarmBanner';
-import { Map, Calendar, Utensils, Volume2, BellRing, Sparkles } from 'lucide-react';
+import { Map, Calendar, Utensils, Receipt, Volume2, BellRing, Sparkles } from 'lucide-react';
 
 export const RestobookSalle = () => {
   const { soundEnabled, enableSound, activeAlarms } = useRestobook();
-  const [activeTab, setActiveTab] = useState('floor'); // 'floor' | 'reservations' | 'menu'
+  const [activeTab, setActiveTab] = useState('floor'); // 'floor' | 'reservations' | 'menu' | 'history'
   const [selectedTableForOrder, setSelectedTableForOrder] = useState(null);
   const [selectedTableForBilling, setSelectedTableForBilling] = useState(null);
 
@@ -89,6 +90,19 @@ export const RestobookSalle = () => {
             <span className="hidden xs:inline">Carte & Prix</span>
             <span className="xs:hidden">Carte</span>
           </button>
+
+          <button
+            onClick={() => setActiveTab('history')}
+            className={`flex items-center gap-1.5 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs font-bold transition-all ${
+              activeTab === 'history'
+                ? 'bg-yellow-500 text-slate-950 shadow-md shadow-yellow-500/20'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Receipt className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span className="hidden xs:inline">Historique Facturation</span>
+            <span className="xs:hidden">Factures</span>
+          </button>
         </div>
 
         {/* Bouton d'activation audio / alarme */}
@@ -119,6 +133,7 @@ export const RestobookSalle = () => {
         )}
         {activeTab === 'reservations' && <ReservationsView />}
         {activeTab === 'menu' && <MenuView />}
+        {activeTab === 'history' && <BillingHistoryView />}
       </div>
 
       {/* Modal Prise de Commande */}

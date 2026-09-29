@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { useRestobook } from '../../context/RestobookContext';
-import { Calendar, Clock, Users, Phone, Plus, Check, UserCheck, X } from 'lucide-react';
+import { Calendar, Clock, Users, Phone, Plus, Check, UserCheck, X, RotateCcw, AlertTriangle, Trash2 } from 'lucide-react';
 
 export const ReservationsView = () => {
-  const { reservations, tables, addReservation, updateTableLayout } = useRestobook();
+  const { reservations, tables, addReservation, resetReservations, updateTableLayout } = useRestobook();
   const [selectedService, setSelectedService] = useState('soir');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     customerName: '',
@@ -84,6 +85,19 @@ export const ReservationsView = () => {
               🌙 Soir
             </button>
           </div>
+
+          {/* Bouton Réinitialiser le cahier */}
+          {reservations.length > 0 && (
+            <button
+              onClick={() => setIsResetModalOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 sm:py-2 bg-red-950/40 hover:bg-red-900/50 text-red-300 font-bold rounded-2xl text-xs border border-red-800/50 transition-colors"
+              title="Réinitialiser le cahier des réservations"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Réinitialiser cahier</span>
+              <span className="sm:hidden">Reset</span>
+            </button>
+          )}
 
           <button
             onClick={() => setIsModalOpen(true)}
@@ -245,6 +259,61 @@ export const ReservationsView = () => {
                 Confirmer la réservation
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Confirmation de Réinitialisation du Cahier */}
+      {isResetModalOpen && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in"
+          onClick={() => setIsResetModalOpen(false)}
+        >
+          <div 
+            className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl text-slate-100 text-center"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="w-12 h-12 rounded-2xl bg-red-500/10 text-red-400 border border-red-500/20 flex items-center justify-center mx-auto mb-3">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+            <h3 className="font-bold text-base mb-1">Réinitialiser le cahier ?</h3>
+            <p className="text-xs text-slate-400 mb-5">
+              Choisissez les réservations que vous souhaitez effacer pour préparer le prochain service.
+            </p>
+
+            <div className="space-y-2 mb-4">
+              <button
+                type="button"
+                onClick={() => {
+                  resetReservations(selectedService);
+                  setIsResetModalOpen(false);
+                }}
+                className="w-full py-2.5 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl text-xs border border-slate-700 transition-colors flex items-center justify-between"
+              >
+                <span>Effacer service {selectedService === 'midi' ? '☀️ Midi' : '🌙 Soir'} uniquement</span>
+                <span className="font-mono text-yellow-400">({filteredReservations.length})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  resetReservations(null);
+                  setIsResetModalOpen(false);
+                }}
+                className="w-full py-2.5 px-3 bg-red-600/30 hover:bg-red-600/50 text-red-200 font-bold rounded-xl text-xs border border-red-500/30 transition-colors flex items-center justify-between"
+              >
+                <span>Effacer tout le cahier (Midi & Soir)</span>
+                <span className="font-mono text-red-300">({reservations.length})</span>
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsResetModalOpen(false)}
+              className="w-full py-2 bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white font-semibold rounded-xl text-xs transition-colors"
+            >
+              Annuler
+            </button>
           </div>
         </div>
       )}

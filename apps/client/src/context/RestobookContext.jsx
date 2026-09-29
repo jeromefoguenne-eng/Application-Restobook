@@ -65,6 +65,61 @@ export const RestobookProvider = ({ children }) => {
   const [activeAlarms, setActiveAlarms] = useState([]);
   const [latestAlarm, setLatestAlarm] = useState(null);
 
+  const [invoices, setInvoices] = useState(() => {
+    try {
+      const rId = currentUser?.restaurantId || 'resto_demo_central';
+      const saved = localStorage.getItem(`restobook_invoices_${rId}`);
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return [
+      {
+        id: 'FAC-20260929-001',
+        invoiceNumber: 'FAC-20260929-001',
+        timestamp: new Date(Date.now() - 3600000 * 2).toISOString(),
+        dateFormatted: new Intl.DateTimeFormat('fr-FR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(Date.now() - 3600000 * 2)),
+        tableNumber: 2,
+        serverName: 'Julie',
+        items: [
+          { name: 'Entrecôte grillée', quantity: 2, unitPrice: 24.50, total: 49.00 },
+          { name: 'Vin rouge Bordeaux', quantity: 1, unitPrice: 18.00, total: 18.00 },
+          { name: 'Café Espresso', quantity: 2, unitPrice: 2.50, total: 5.00 }
+        ],
+        totalAmount: 72.00,
+        currency: '€',
+        currencyCode: 'EUR',
+        paymentMethod: 'card',
+        paymentMethodLabel: 'Carte Bancaire',
+        splitCount: 1,
+        vatRate: 10,
+        vatAmount: 6.55,
+        netAmount: 65.45
+      },
+      {
+        id: 'FAC-20260929-002',
+        invoiceNumber: 'FAC-20260929-002',
+        timestamp: new Date(Date.now() - 3600000).toISOString(),
+        dateFormatted: new Intl.DateTimeFormat('fr-FR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(Date.now() - 3600000)),
+        tableNumber: 5,
+        serverName: 'Thomas',
+        items: [
+          { name: 'Salade César', quantity: 1, unitPrice: 13.50, total: 13.50 },
+          { name: 'Filet de Bar rôti', quantity: 1, unitPrice: 22.00, total: 22.00 },
+          { name: 'Tiramisu Maison', quantity: 1, unitPrice: 7.50, total: 7.50 },
+          { name: 'Eau Minérale 1L', quantity: 1, unitPrice: 4.50, total: 4.50 }
+        ],
+        totalAmount: 47.50,
+        currency: '€',
+        currencyCode: 'EUR',
+        paymentMethod: 'cash',
+        paymentMethodLabel: 'Espèces',
+        splitCount: 1,
+        vatRate: 10,
+        vatAmount: 4.32,
+        netAmount: 43.18
+      }
+    ];
+  });
+
   const wsRef = useRef(null);
   const reconnectTimeoutRef = useRef(null);
 
@@ -85,11 +140,15 @@ export const RestobookProvider = ({ children }) => {
         menuCategories: updates.menuCategories !== undefined ? updates.menuCategories : menuCategories,
         menuItems: updates.menuItems !== undefined ? updates.menuItems : menuItems,
         reservations: updates.reservations !== undefined ? updates.reservations : reservations,
+        invoices: updates.invoices !== undefined ? updates.invoices : invoices,
         restaurantName: updates.restaurantName !== undefined ? updates.restaurantName : restaurantName,
         currency: updates.currency !== undefined ? updates.currency : currency
       };
       // 1. Sauvegarde locale (offline-first)
       localStorage.setItem(`restobook_state_${rId}`, JSON.stringify(stateToSave));
+      if (updates.invoices !== undefined) {
+        localStorage.setItem(`restobook_invoices_${rId}`, JSON.stringify(updates.invoices));
+      }
 
       // 2. Sauvegarde persistante dans le Cloud mondial (retained) pour TOUS les appareils
       cloudSync.publishProjectState(rId, stateToSave);
@@ -121,6 +180,7 @@ export const RestobookProvider = ({ children }) => {
         if (msg.payload.menuCategories) setMenuCategories(msg.payload.menuCategories);
         if (msg.payload.menuItems) setMenuItems(msg.payload.menuItems);
         if (msg.payload.reservations) setReservations(msg.payload.reservations);
+        if (msg.payload.invoices) setInvoices(msg.payload.invoices);
         if (msg.payload.activeAlarms) setActiveAlarms(msg.payload.activeAlarms);
         if (msg.payload.pairingCode) setPairingCode(msg.payload.pairingCode);
         if (msg.payload.name) setRestaurantName(msg.payload.name);
@@ -232,8 +292,21 @@ export const RestobookProvider = ({ children }) => {
         break;
 
       case 'RESERVATION_ADDED':
-        setReservations(msg.payload.reservations);
-        saveRestoState({ reservations: msg.payload.reservations });
+      case 'RESERVATIONS_RESET':
+        setReservations(msg.payload.reservations || []);
+        saveRestoState({ reservations: msg.payload.reservations || [] });
+        break;
+
+      case 'INVOICE_CREATED':
+        if (msg.payload.invoices) {
+          setInvoices(msg.payload.invoices);
+          saveRestoState({ invoices: msg.payload.invoices });
+        }
+        break;
+
+      case 'INVOICES_CLEARED':
+        setInvoices([]);
+        saveRestoState({ invoices: [] });
         break;
 
       case 'MENU_UPDATED':
@@ -255,6 +328,7 @@ export const RestobookProvider = ({ children }) => {
             menuCategories,
             menuItems,
             reservations,
+            invoices,
             activeAlarms,
             name: restaurantName,
             currency
@@ -375,6 +449,7 @@ export const RestobookProvider = ({ children }) => {
         if (parsed.menuCategories) setMenuCategories(parsed.menuCategories);
         if (parsed.menuItems) setMenuItems(parsed.menuItems);
         if (parsed.reservations) setReservations(parsed.reservations || []);
+        if (parsed.invoices) setInvoices(parsed.invoices || []);
         if (parsed.restaurantName) setRestaurantName(parsed.restaurantName);
         if (parsed.currency) setCurrency(parsed.currency);
       } else {
@@ -400,6 +475,7 @@ export const RestobookProvider = ({ children }) => {
         setMenuCategories(initialCategories);
         setMenuItems(initialMenuItems);
         setReservations([]);
+        setInvoices([]);
 
         const initialState = {
           tables: initialTables,
@@ -407,6 +483,7 @@ export const RestobookProvider = ({ children }) => {
           menuCategories: initialCategories,
           menuItems: initialMenuItems,
           reservations: [],
+          invoices: [],
           restaurantName: currentUser?.restaurantName || 'Mon Restaurant',
           currency: currentUser?.currency || AVAILABLE_CURRENCIES[0]
         };
@@ -439,6 +516,7 @@ export const RestobookProvider = ({ children }) => {
       if (cloudState.menuCategories) setMenuCategories(cloudState.menuCategories);
       if (cloudState.menuItems) setMenuItems(cloudState.menuItems);
       if (cloudState.reservations) setReservations(cloudState.reservations);
+      if (cloudState.invoices) setInvoices(cloudState.invoices);
       if (cloudState.restaurantName) setRestaurantName(cloudState.restaurantName);
       if (cloudState.currency) setCurrency(cloudState.currency);
 
@@ -664,7 +742,7 @@ export const RestobookProvider = ({ children }) => {
     broadcastAction('TABLES_LAYOUT_UPDATED', { tables: updated });
   };
 
-  const closeTableBill = (tableId) => {
+  const closeTableBill = (tableId, invoiceData = null) => {
     const tableObj = tables.find(t => t.id === tableId || t.number === tableId);
     const tableNum = tableObj?.number;
 
@@ -679,6 +757,9 @@ export const RestobookProvider = ({ children }) => {
       return t;
     });
 
+    const updatedTickets = tickets.filter(t => t.tableId !== tableId && t.tableNumber !== tableNum);
+    setTickets(updatedTickets);
+
     const updatedAlarms = activeAlarms.filter(a => 
       a.tableId !== tableId && 
       a.tableNumber !== tableId && 
@@ -692,8 +773,17 @@ export const RestobookProvider = ({ children }) => {
     } else {
       setLatestAlarm(updatedAlarms[updatedAlarms.length - 1]);
     }
-    saveRestoState({ tables: updatedTables });
-    broadcastAction('TABLE_BILLED', { tables: updatedTables, activeAlarms: updatedAlarms });
+
+    let updatedInvoices = invoices;
+    if (invoiceData) {
+      updatedInvoices = [invoiceData, ...invoices];
+      setInvoices(updatedInvoices);
+      saveRestoState({ tables: updatedTables, tickets: updatedTickets, invoices: updatedInvoices });
+      broadcastAction('INVOICE_CREATED', { invoices: updatedInvoices, newInvoice: invoiceData, tables: updatedTables });
+    } else {
+      saveRestoState({ tables: updatedTables, tickets: updatedTickets });
+      broadcastAction('TABLE_BILLED', { tables: updatedTables, activeAlarms: updatedAlarms });
+    }
   };
 
   const addReservation = (reservation) => {
@@ -708,6 +798,24 @@ export const RestobookProvider = ({ children }) => {
     setReservations(updatedReservations);
     saveRestoState({ reservations: updatedReservations });
     broadcastAction('RESERVATION_ADDED', { reservations: updatedReservations });
+  };
+
+  const resetReservations = (service = null) => {
+    let updatedReservations;
+    if (service) {
+      updatedReservations = reservations.filter(r => r.service !== service);
+    } else {
+      updatedReservations = [];
+    }
+    setReservations(updatedReservations);
+    saveRestoState({ reservations: updatedReservations });
+    broadcastAction('RESERVATIONS_RESET', { reservations: updatedReservations });
+  };
+
+  const clearInvoices = () => {
+    setInvoices([]);
+    saveRestoState({ invoices: [] });
+    broadcastAction('INVOICES_CLEARED', { invoices: [] });
   };
 
   const addMenuItem = (itemData) => {
@@ -839,6 +947,9 @@ export const RestobookProvider = ({ children }) => {
         deleteTable,
         closeTableBill,
         addReservation,
+        resetReservations,
+        invoices,
+        clearInvoices,
         addMenuItem,
         updateMenuItem,
         deleteMenuItem,

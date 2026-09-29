@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { useRestobook } from '../../context/RestobookContext';
+import { useAuth } from '../../context/AuthContext';
 import { X, CreditCard, Banknote, Ticket, Check, Users, Printer } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 export const BillingModal = ({ table, onClose }) => {
   const { tickets, closeTableBill, formatPrice, currency, restaurantName } = useRestobook();
+  const { currentUser } = useAuth();
   const [splitCount, setSplitCount] = useState(1);
   const [selectedMethod, setSelectedMethod] = useState('card');
   const [cashGiven, setCashGiven] = useState('');
@@ -25,9 +27,53 @@ export const BillingModal = ({ table, onClose }) => {
       origin: { y: 0.7 }
     });
 
+    const now = new Date();
+    const dateFormatted = new Intl.DateTimeFormat('fr-FR', {
+      dateStyle: 'short',
+      timeStyle: 'short'
+    }).format(now);
+
+    const itemsSummary = allItems.length > 0
+      ? allItems.map(it => ({
+          name: it.name || it.itemName || 'Consommation',
+          quantity: it.quantity || 1,
+          unitPrice: it.unitPrice || 0,
+          total: (it.unitPrice || 0) * (it.quantity || 1)
+        }))
+      : [
+          {
+            name: `Forfait Consommations Table ${table.number}`,
+            quantity: 1,
+            unitPrice: totalAmount,
+            total: totalAmount
+          }
+        ];
+
+    const invoiceData = {
+      id: `FAC-${Date.now().toString().slice(-6)}`,
+      invoiceNumber: `FAC-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(Math.floor(100 + Math.random() * 900))}`,
+      timestamp: now.toISOString(),
+      dateFormatted,
+      tableId: table.id,
+      tableNumber: table.number,
+      serverName: currentUser?.name || 'Service Salle',
+      items: itemsSummary,
+      totalAmount,
+      currency: currency.symbol,
+      currencyCode: currency.code,
+      paymentMethod: selectedMethod,
+      paymentMethodLabel: selectedMethod === 'card' ? 'Carte Bancaire' : (selectedMethod === 'cash' ? 'Espèces' : 'Titres Resto'),
+      splitCount,
+      cashGiven: selectedMethod === 'cash' ? (parseFloat(cashGiven) || totalAmount) : null,
+      changeReturned: selectedMethod === 'cash' ? changeToReturn : null,
+      vatRate: 10,
+      vatAmount: totalAmount - (totalAmount / 1.10),
+      netAmount: totalAmount / 1.10
+    };
+
     setIsSuccess(true);
     setTimeout(() => {
-      closeTableBill(table.id);
+      closeTableBill(table.id, invoiceData);
       onClose();
     }, 1200);
   };
