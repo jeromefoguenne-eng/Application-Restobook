@@ -189,9 +189,9 @@ export const OrderTakingModal = ({ table, onClose, onOpenBilling }) => {
         </div>
 
         {/* Corps scindé : Plein écran ou Côte-à-côte */}
-        <div className="flex-1 flex overflow-hidden relative">
+        <div className="flex-1 min-h-0 flex overflow-hidden relative">
           {/* Colonne gauche : Catalogue de plats */}
-          <div className={`flex-1 flex-col border-r border-slate-800 p-2.5 sm:p-4 overflow-hidden ${
+          <div className={`flex-1 min-h-0 flex-col border-r border-slate-800 p-2.5 sm:p-4 overflow-hidden ${
             mobileTab === 'menu' ? 'flex' : 'hidden md:flex'
           }`}>
             {/* Sélecteur de temps de service (Phase) */}
@@ -242,7 +242,7 @@ export const OrderTakingModal = ({ table, onClose, onOpenBilling }) => {
 
             {/* Grille des articles du menu */}
             <div 
-              className="flex-1 overflow-y-auto grid grid-cols-2 md:grid-cols-3 gap-2 sm:gap-3 pr-1 pt-1 content-start"
+              className="flex-1 min-h-0 overflow-y-auto grid grid-cols-2 md:grid-cols-3 gap-2 sm:gap-3 pr-1 pt-1 pb-16 sm:pb-2 content-start"
               style={{ touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}
             >
               {filteredItems.map(item => {
@@ -313,7 +313,7 @@ export const OrderTakingModal = ({ table, onClose, onOpenBilling }) => {
           </div>
 
           {/* Colonne droite : Bon / Ticket en cours */}
-          <div className={`w-full md:w-88 lg:w-96 flex-col bg-slate-950/90 p-3 sm:p-4 ${
+          <div className={`w-full md:w-88 lg:w-96 min-h-0 flex-col bg-slate-950/90 p-3 sm:p-4 ${
             mobileTab === 'cart' ? 'flex' : 'hidden md:flex'
           }`}>
             <div className="flex items-center justify-between pb-2.5 sm:pb-3 border-b border-slate-800 shrink-0">
@@ -332,7 +332,7 @@ export const OrderTakingModal = ({ table, onClose, onOpenBilling }) => {
 
             {/* Liste des articles du panier */}
             <div 
-              className="flex-1 overflow-y-auto py-2 sm:py-3 space-y-2 pr-1"
+              className="flex-1 min-h-0 overflow-y-auto py-2 sm:py-3 space-y-2 pr-1"
               style={{ touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}
             >
               {cartItems.length === 0 ? (

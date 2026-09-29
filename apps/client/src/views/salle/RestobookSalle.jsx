@@ -25,12 +25,12 @@ export const RestobookSalle = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-slate-950 text-slate-100 overflow-hidden relative">
+    <div className="flex flex-col h-full min-h-0 bg-slate-950 text-slate-100 overflow-hidden relative">
       {/* Bannière d'Alarme Popup Cuisine */}
       <AlarmBanner />
 
       {/* Barre de navigation interne Salle */}
-      <div className="flex flex-wrap sm:flex-nowrap items-center justify-between px-3 sm:px-6 py-2.5 sm:py-3 bg-slate-900 border-b border-slate-800 z-10 gap-2">
+      <div className="flex flex-wrap sm:flex-nowrap items-center justify-between px-3 sm:px-6 py-2.5 sm:py-3 bg-slate-900 border-b border-slate-800 z-10 gap-2 shrink-0">
         <div className="flex items-center gap-2 sm:gap-3">
           <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 flex items-center justify-center font-bold text-base sm:text-lg shrink-0">
             🍽️
@@ -127,7 +127,7 @@ export const RestobookSalle = () => {
       </div>
 
       {/* Contenu principal */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 min-h-0 flex flex-col overflow-hidden relative">
         {activeTab === 'floor' && (
           <FloorPlanCanvas onSelectTable={handleSelectTable} />
         )}

@@ -89,11 +89,11 @@ export const MenuView = () => {
 
   return (
     <div 
-      className="flex-1 flex flex-col p-3 sm:p-6 bg-slate-950 overflow-y-auto"
-      style={{ touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}
+      className="flex-1 min-h-0 w-full h-full flex flex-col p-3 sm:p-6 bg-slate-950 overflow-y-auto pb-28 sm:pb-8"
+      style={{ touchAction: 'pan-y', WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain' }}
     >
       {/* En-tête : Titre + Sélecteur de Devise + Bouton Ajouter */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 sm:pb-4 border-b border-slate-800 mb-4 sm:mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 sm:pb-4 border-b border-slate-800 mb-4 sm:mb-6 shrink-0">
         <div>
           <h2 className="text-lg sm:text-xl font-bold flex items-center gap-2">
             <Utensils className="w-5 h-5 text-yellow-400" />
@@ -146,7 +146,7 @@ export const MenuView = () => {
 
       {/* Onglets de séparation claire : Entrées, Plats, Boissons, Desserts */}
       <div 
-        className="flex gap-2 pb-4 overflow-x-auto scrollbar-none border-b border-slate-800/80 mb-6"
+        className="flex gap-2 pb-3 overflow-x-auto scrollbar-none border-b border-slate-800/80 mb-5 shrink-0"
         style={{ touchAction: 'pan-x', WebkitOverflowScrolling: 'touch' }}
       >
         {menuCategories.map(cat => {

@@ -75,10 +75,12 @@ export const MenuItemModal = ({ isOpen, onClose, onSave, itemToEdit, categories,
   return (
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-2 sm:p-4 overflow-y-auto animate-in fade-in"
+      style={{ touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl text-slate-100 max-h-[94vh] overflow-y-auto my-auto"
+        className="relative w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl text-slate-100 max-h-[92vh] sm:max-h-[94vh] overflow-y-auto my-auto"
+        style={{ touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}
         onClick={(e) => e.stopPropagation()}
       >
         <button

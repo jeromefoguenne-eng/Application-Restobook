@@ -7,9 +7,20 @@
   color-scheme: dark;
 }
 
-body {
-  touch-action: manipulation;
+html, body {
+  height: 100%;
+  height: 100dvh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
   -webkit-tap-highlight-color: transparent;
+}
+
+#root {
+  height: 100%;
+  height: 100dvh;
+  width: 100%;
+  overflow: hidden;
 }
 
 /* Scrollbar discrète */
@@ -28,6 +39,19 @@ body {
   background: rgba(100, 116, 139, 0.8);
 }
 
+/* Défilement tactile fluide sur mobile */
+.overflow-y-auto {
+  -webkit-overflow-scrolling: touch !important;
+  touch-action: pan-y !important;
+  overscroll-behavior-y: contain;
+}
+
+.overflow-x-auto {
+  -webkit-overflow-scrolling: touch !important;
+  touch-action: pan-x !important;
+  overscroll-behavior-x: contain;
+}
+
 /* Masquer scrollbar pour carrousels tactiles */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
@@ -36,4 +60,3 @@ body {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
-

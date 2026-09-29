@@ -214,11 +214,11 @@ export const BillingHistoryView = () => {
 
   return (
     <div 
-      className="flex-1 flex flex-col p-3 sm:p-6 bg-slate-950 overflow-y-auto"
+      className="flex-1 min-h-0 w-full h-full flex flex-col p-3 sm:p-6 bg-slate-950 overflow-y-auto pb-28 sm:pb-8"
       style={{ touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}
     >
       {/* En-tête : Titre & Boutons d'export Excel */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 sm:pb-4 border-b border-slate-800 mb-4 sm:mb-6">
+      <div className="shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 sm:pb-4 border-b border-slate-800 mb-4 sm:mb-6">
         <div>
           <h2 className="text-lg sm:text-xl font-bold flex items-center gap-2">
             <Receipt className="w-5 h-5 text-yellow-400" />
@@ -265,7 +265,7 @@ export const BillingHistoryView = () => {
       </div>
 
       {/* Cartes KPI Statistiques */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+      <div className="shrink-0 grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
         <div className="p-3.5 sm:p-4 bg-slate-900/80 border border-slate-800 rounded-2xl flex flex-col justify-between">
           <div className="flex items-center justify-between text-slate-400 text-xs mb-1">
             <span>Chiffre d'Affaires</span>

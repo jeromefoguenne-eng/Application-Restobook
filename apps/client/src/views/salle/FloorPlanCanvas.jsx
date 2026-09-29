@@ -170,7 +170,7 @@ export const FloorPlanCanvas = ({ onSelectTable }) => {
   ).length;
 
   return (
-    <div className="flex flex-col h-full bg-slate-950 p-2 sm:p-4 overflow-hidden">
+    <div className="flex flex-col h-full min-h-0 w-full bg-slate-950 p-2 sm:p-4 overflow-hidden">
       {/* Barre d'outils du plan */}
       <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 sm:pb-3 border-b border-slate-800 mb-2 sm:mb-3 shrink-0">
         <div className="flex items-center gap-2 sm:gap-3">
@@ -269,7 +269,7 @@ export const FloorPlanCanvas = ({ onSelectTable }) => {
 
       {/* VUE 1 : GRILLE TACTILE RAPIDE (OPTIMISÉE SMARTPHONE & SERVICE PRESSÉ) */}
       {viewMode === 'grid' && (
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
           {/* Filtres de statut rapides */}
           <div 
             className="flex gap-1.5 overflow-x-auto pb-2 mb-2 scrollbar-none shrink-0"
@@ -320,7 +320,7 @@ export const FloorPlanCanvas = ({ onSelectTable }) => {
 
           {/* Grille tactile des tables */}
           <div 
-            className="flex-1 overflow-y-auto pr-1 grid grid-cols-2 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5 sm:gap-3 content-start"
+            className="flex-1 min-h-0 overflow-y-auto pr-1 pb-28 sm:pb-8 grid grid-cols-2 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5 sm:gap-3 content-start"
             style={{ touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}
           >
             {filteredTables.map((table) => {
@@ -391,7 +391,7 @@ export const FloorPlanCanvas = ({ onSelectTable }) => {
       {/* VUE 2 : CANVAS 2D INTERACTIF (PLAN SPATIAL AVEC GLISSER-DÉPOSER) */}
       {viewMode === 'canvas' && (
         <div 
-          className="flex-1 overflow-auto rounded-2xl border border-slate-800 relative bg-slate-950/60"
+          className="flex-1 min-h-0 overflow-auto rounded-2xl border border-slate-800 relative bg-slate-950/60 pb-20 sm:pb-0"
           style={{ touchAction: isEditMode ? 'none' : 'pan-x pan-y', WebkitOverflowScrolling: 'touch' }}
         >
           <div

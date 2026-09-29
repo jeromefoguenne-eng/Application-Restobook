@@ -108,7 +108,7 @@ export const RestobookKitchen = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-slate-950 text-slate-100 overflow-hidden">
+    <div className="flex flex-col h-full min-h-0 w-full bg-slate-950 text-slate-100 overflow-hidden">
       {/* En-tête Cuisine KDS */}
       <div className="flex flex-wrap sm:flex-nowrap items-center justify-between px-3 sm:px-6 py-2.5 sm:py-3 bg-slate-900 border-b border-slate-800 z-10 gap-2 shrink-0">
         <div className="flex items-center gap-2 sm:gap-3">
@@ -168,7 +168,7 @@ export const RestobookKitchen = () => {
 
       {/* Grille horizontale des bons de commande avec snap tactile sur smartphone */}
       <div 
-        className="flex-1 overflow-x-auto p-2.5 sm:p-4 flex gap-3 sm:gap-4 items-start scrollbar-thin snap-x snap-mandatory"
+        className="flex-1 min-h-0 overflow-x-auto p-2.5 sm:p-4 flex gap-3 sm:gap-4 items-start scrollbar-thin snap-x snap-mandatory pb-24 sm:pb-4"
         style={{ touchAction: 'pan-x', WebkitOverflowScrolling: 'touch' }}
       >
         {activeTab === 'active' && activeTickets.length === 0 && (

@@ -55,7 +55,7 @@ export function App() {
   const isOnline = cloudConnected || connected;
 
   return (
-    <div className="flex flex-col h-screen w-screen bg-slate-950 text-slate-100 overflow-hidden">
+    <div className="flex flex-col h-screen h-[100dvh] w-full bg-slate-950 text-slate-100 overflow-hidden">
       {/* Barre Supérieure Globale */}
       <header className="h-14 px-2 sm:px-4 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between z-20 backdrop-blur-md shrink-0 gap-1.5 sm:gap-3">
         <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
@@ -184,29 +184,29 @@ export function App() {
       </header>
 
       {/* Zone d'affichage principale selon le mode */}
-      <main className="flex-1 overflow-hidden">
+      <main className="flex-1 min-h-0 flex flex-col overflow-hidden relative">
         {activeMode === 'salle' && <RestobookSalle />}
         {activeMode === 'cuisine' && <RestobookKitchen />}
         {activeMode === 'duo' && (
           <div className="flex h-full w-full divide-x-2 divide-slate-800">
             {/* Moitié gauche : Tablette 1 (Salle) */}
             <div className="w-1/2 h-full flex flex-col overflow-hidden relative">
-              <div className="bg-slate-900/60 px-4 py-1 text-[11px] font-bold text-yellow-400 flex items-center justify-between border-b border-slate-800">
+              <div className="bg-slate-900/60 px-4 py-1 text-[11px] font-bold text-yellow-400 flex items-center justify-between border-b border-slate-800 shrink-0">
                 <span>📱 TABLETTE 1 : SALLE & PLAN DE TABLE (POS)</span>
                 <span className="text-slate-400 font-normal">Glissez les tables • Prenez commande</span>
               </div>
-              <div className="flex-1 overflow-hidden">
+              <div className="flex-1 min-h-0 flex flex-col overflow-hidden relative">
                 <RestobookSalle />
               </div>
             </div>
 
             {/* Moitié droite : Tablette 2 (Cuisine) */}
             <div className="w-1/2 h-full flex flex-col overflow-hidden relative">
-              <div className="bg-slate-900/60 px-4 py-1 text-[11px] font-bold text-amber-400 flex items-center justify-between border-b border-slate-800">
+              <div className="bg-slate-900/60 px-4 py-1 text-[11px] font-bold text-amber-400 flex items-center justify-between border-b border-slate-800 shrink-0">
                 <span>👨‍🍳 TABLETTE 2 : CUISINE EN DIRECT (KDS)</span>
                 <span className="text-slate-400 font-normal">Réorganisez l'ordre • Cliquez "Prêt" pour sonner</span>
               </div>
-              <div className="flex-1 overflow-hidden">
+              <div className="flex-1 min-h-0 flex flex-col overflow-hidden relative">
                 <RestobookKitchen />
               </div>
             </div>
