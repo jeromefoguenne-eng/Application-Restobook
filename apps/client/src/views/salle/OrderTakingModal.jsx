@@ -11,7 +11,12 @@ export const OrderTakingModal = ({ table, onClose, onOpenBilling }) => {
   const [tempModifiers, setTempModifiers] = useState([]);
   const [serverName, setServerName] = useState('Alexandre');
 
-  const isAlarming = activeAlarms.includes(table.id);
+  const isAlarming = activeAlarms.some(a => 
+    a.tableId === table.id || 
+    a.tableNumber === table.number || 
+    String(a.tableNumber) === String(table.number) ||
+    String(a.tableId) === String(table.id)
+  ) || table.status === 'ready' || table.status === 'READY_TO_SERVE';
   const tableTickets = tickets.filter(t => t.tableId === table.id);
   const [mobileTab, setMobileTab] = useState('menu'); // 'menu' | 'cart'
 
@@ -128,7 +133,7 @@ export const OrderTakingModal = ({ table, onClose, onOpenBilling }) => {
             {/* Acquitter l'alarme si prêt */}
             {isAlarming && (
               <button
-                onClick={() => acknowledgeOrder(null, table.id)}
+                onClick={() => acknowledgeOrder(null, table.id || table.number)}
                 className="flex items-center gap-1.5 px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-bold shadow-lg transition-all animate-bounce-short"
               >
                 <CheckCircle className="w-4 h-4" /> Acquitter le passe

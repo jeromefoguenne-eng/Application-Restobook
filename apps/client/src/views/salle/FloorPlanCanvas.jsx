@@ -124,7 +124,12 @@ export const FloorPlanCanvas = ({ onSelectTable }) => {
 
   // Obtenir la couleur et l'animation selon le statut de la table
   const getTableStyle = (table) => {
-    const isAlarming = activeAlarms.includes(table.id) || table.status === 'ready';
+    const isAlarming = activeAlarms.some(a => 
+      a.tableId === table.id || 
+      a.tableNumber === table.number || 
+      String(a.tableNumber) === String(table.number) ||
+      String(a.tableId) === String(table.id)
+    ) || table.status === 'ready' || table.status === 'READY_TO_SERVE';
 
     if (isAlarming) {
       return {
@@ -265,7 +270,12 @@ export const FloorPlanCanvas = ({ onSelectTable }) => {
         {/* Rendu des tables sur le plan */}
         {tables.map((table) => {
           const style = getTableStyle(table);
-          const isAlarming = activeAlarms.includes(table.id) || table.status === 'ready';
+          const isAlarming = activeAlarms.some(a => 
+            a.tableId === table.id || 
+            a.tableNumber === table.number || 
+            String(a.tableNumber) === String(table.number) ||
+            String(a.tableId) === String(table.id)
+          ) || table.status === 'ready' || table.status === 'READY_TO_SERVE';
 
           return (
             <div

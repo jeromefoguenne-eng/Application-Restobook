@@ -5,10 +5,26 @@ import { BellRing, Check, UtensilsCrossed, Volume2 } from 'lucide-react';
 export const AlarmBanner = () => {
   const { activeAlarms, latestAlarm, acknowledgeOrder } = useRestobook();
 
-  if (!latestAlarm || activeAlarms.length === 0) return null;
+  // Trouver l'alarme courante : soit latestAlarm, soit la première alarme active
+  const currentAlarm = latestAlarm || (activeAlarms.length > 0 ? activeAlarms[activeAlarms.length - 1] : null);
+
+  if (!currentAlarm || activeAlarms.length === 0) return null;
+
+  const ticketId = currentAlarm.ticketId || currentAlarm.ticket?.id;
+  const tableId = currentAlarm.tableId || currentAlarm.ticket?.tableId;
+  const tableNumber = currentAlarm.tableNumber || currentAlarm.ticket?.tableNumber || '?';
+  const items = currentAlarm.items || currentAlarm.ticket?.items || [];
 
   const handleAcknowledge = () => {
-    acknowledgeOrder(latestAlarm.ticketId, latestAlarm.tableId);
+    acknowledgeOrder(ticketId, tableId || tableNumber);
+  };
+
+  const handleAcknowledgeAll = (e) => {
+    e.stopPropagation();
+    // Acquitter toutes les alarmes une par une ou vider
+    activeAlarms.forEach(a => {
+      acknowledgeOrder(a.ticketId || a.ticket?.id, a.tableId || a.tableNumber);
+    });
   };
 
   return (
@@ -22,29 +38,41 @@ export const AlarmBanner = () => {
           <div>
             <div className="flex items-center gap-2">
               <span className="bg-white/20 px-2.5 py-0.5 rounded-full text-xs font-black tracking-wider uppercase">
-                Passe-Plat Cuisine
+                Passe-Plat Cuisine {activeAlarms.length > 1 && `(${activeAlarms.length} en attente)`}
               </span>
               <span className="flex items-center gap-1 text-xs text-red-100">
                 <Volume2 className="w-3.5 h-3.5 animate-pulse" /> Alarme sonore active
               </span>
             </div>
             <h3 className="text-xl font-extrabold tracking-tight mt-0.5">
-              🚨 TABLE {latestAlarm.tableNumber} : Plats prêts au passe !
+              🚨 TABLE {tableNumber} : Plats prêts au passe !
             </h3>
             <p className="text-xs text-red-100 line-clamp-1 mt-0.5">
-              {latestAlarm.items?.map(i => `${i.name || i.itemName}`).join(' • ')}
+              {items && items.length > 0 
+                ? items.map(i => `${i.quantity ? i.quantity + 'x ' : ''}${i.name || i.itemName}`).join(' • ')
+                : `${currentAlarm.itemsCount || 1} commande(s) prête(s)`}
             </p>
           </div>
         </div>
 
-        {/* Bouton d'acquittement */}
-        <button
-          onClick={handleAcknowledge}
-          className="flex items-center gap-2 bg-white text-red-700 hover:bg-red-50 font-black px-5 py-3 rounded-xl shadow-xl transition-all transform hover:scale-105 active:scale-95 shrink-0"
-        >
-          <Check className="w-5 h-5 stroke-[3]" />
-          <span>J'ARRIVE / RÉCUPÉRÉ</span>
-        </button>
+        {/* Boutons d'acquittement */}
+        <div className="flex items-center gap-2">
+          {activeAlarms.length > 1 && (
+            <button
+              onClick={handleAcknowledgeAll}
+              className="text-xs font-bold text-red-100 hover:text-white underline px-2 py-1"
+            >
+              Tout acquitter
+            </button>
+          )}
+          <button
+            onClick={handleAcknowledge}
+            className="flex items-center gap-2 bg-white text-red-700 hover:bg-red-50 font-black px-5 py-3 rounded-xl shadow-xl transition-all transform hover:scale-105 active:scale-95 shrink-0"
+          >
+            <Check className="w-5 h-5 stroke-[3]" />
+            <span>J'ARRIVE / RÉCUPÉRÉ</span>
+          </button>
+        </div>
       </div>
     </div>
   );

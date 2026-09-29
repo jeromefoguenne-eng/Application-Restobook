@@ -179,18 +179,22 @@ export const RestobookProvider = ({ children }) => {
 
       // 🚨 RÉCEPTION D'UNE ALARME DE CUISINE
       case 'ORDER_READY': {
-        const { ticket, tables: updatedTables, activeAlarms: updatedAlarms } = msg.payload;
+        const { ticket, tables: updatedTables, activeAlarms: updatedAlarms, alarm } = msg.payload;
         if (updatedTables) {
           setTables(updatedTables);
           saveRestoState({ tables: updatedTables });
         }
-        if (updatedAlarms) setActiveAlarms(updatedAlarms);
-        setTickets(prev => {
-          const updated = prev.map(t => t.id === ticket.id ? ticket : t);
-          saveRestoState({ tickets: updated });
-          return updated;
-        });
-        setLatestAlarm(msg.payload);
+        const finalAlarms = updatedAlarms || [];
+        setActiveAlarms(finalAlarms);
+        if (ticket) {
+          setTickets(prev => {
+            const updated = prev.map(t => t.id === ticket.id ? ticket : t);
+            saveRestoState({ tickets: updated });
+            return updated;
+          });
+        }
+        const currentAlarm = alarm || (finalAlarms.length > 0 ? finalAlarms[finalAlarms.length - 1] : null);
+        setLatestAlarm(currentAlarm);
 
         // Déclencher le carillon et l'alarme
         soundEngine.startKitchenAlarm();
@@ -209,6 +213,8 @@ export const RestobookProvider = ({ children }) => {
           if (updatedAlarms.length === 0) {
             soundEngine.stopKitchenAlarm();
             setLatestAlarm(null);
+          } else {
+            setLatestAlarm(updatedAlarms[updatedAlarms.length - 1]);
           }
         }
         break;
@@ -515,8 +521,8 @@ export const RestobookProvider = ({ children }) => {
     setTickets(newTickets);
 
     const updatedTables = tables.map(t => {
-      if (t.id === ticket.tableId) {
-        return { ...t, status: 'READY_TO_SERVE' };
+      if (t.id === ticket.tableId || t.number === ticket.tableNumber || String(t.number) === String(ticket.tableNumber)) {
+        return { ...t, status: 'ready' };
       }
       return t;
     });
@@ -524,9 +530,11 @@ export const RestobookProvider = ({ children }) => {
 
     const alarmPayload = {
       ticketId,
+      tableId: ticket.tableId,
       tableNumber: ticket.tableNumber,
       serverName: ticket.serverName,
-      itemsCount: ticket.items.length,
+      items: ticket.items,
+      itemsCount: ticket.items?.length || 0,
       createdAt: new Date().toISOString()
     };
 
@@ -535,29 +543,59 @@ export const RestobookProvider = ({ children }) => {
     setLatestAlarm(alarmPayload);
 
     saveRestoState({ tickets: newTickets, tables: updatedTables });
-    broadcastAction('ORDER_READY', { ticket: updatedTicket, tables: updatedTables, activeAlarms: updatedAlarms });
+    broadcastAction('ORDER_READY', { ticket: updatedTicket, tables: updatedTables, activeAlarms: updatedAlarms, alarm: alarmPayload });
     soundEngine.startKitchenAlarm();
   };
 
   const acknowledgeOrder = (ticketId, tableId) => {
-    const updatedAlarms = activeAlarms.filter(a => a.ticketId !== ticketId);
+    // 1. Filtrer les alarmes actives correspondant à ce ticket OU à cette table
+    const updatedAlarms = activeAlarms.filter(a => {
+      if (ticketId && a.ticketId === ticketId) return false;
+      if (tableId && (
+        a.tableId === tableId || 
+        a.tableNumber === tableId || 
+        String(a.tableNumber) === String(tableId) ||
+        String(a.tableId) === String(tableId)
+      )) return false;
+      return true;
+    });
     setActiveAlarms(updatedAlarms);
 
+    // 2. Trouver la table concernée pour la repasser en 'occupied'
+    const targetTableId = tableId;
+    const relatedTicket = ticketId ? tickets.find(t => t.id === ticketId) : null;
+    const relatedTableId = relatedTicket?.tableId;
+    const relatedTableNumber = relatedTicket?.tableNumber;
+
     const updatedTables = tables.map(t => {
-      if (t.id === tableId || t.number === tableId) {
-        return { ...t, status: 'OCCUPIED' };
+      const matches = 
+        (targetTableId && (t.id === targetTableId || t.number === targetTableId || String(t.number) === String(targetTableId))) ||
+        (relatedTableId && (t.id === relatedTableId || t.number === relatedTableId || String(t.number) === String(relatedTableId))) ||
+        (relatedTableNumber && (t.number === relatedTableNumber || String(t.number) === String(relatedTableNumber)));
+
+      if (matches) {
+        return { ...t, status: 'occupied' };
       }
       return t;
     });
     setTables(updatedTables);
 
-    saveRestoState({ tables: updatedTables });
-    broadcastAction('ORDER_ACKNOWLEDGED', { activeAlarms: updatedAlarms, tables: updatedTables });
-
+    // 3. Couper l'alarme sonore et masquer la bannière si aucune alarme restante
     if (updatedAlarms.length === 0) {
       soundEngine.stopKitchenAlarm();
       setLatestAlarm(null);
+    } else {
+      setLatestAlarm(updatedAlarms[updatedAlarms.length - 1]);
     }
+
+    // 4. Sauvegarde et diffusion
+    saveRestoState({ tables: updatedTables });
+    broadcastAction('ORDER_ACKNOWLEDGED', { 
+      activeAlarms: updatedAlarms, 
+      tables: updatedTables,
+      acknowledgedTicketId: ticketId,
+      acknowledgedTableId: tableId
+    });
   };
 
   const updateTableLayout = (newTables) => {
@@ -574,20 +612,33 @@ export const RestobookProvider = ({ children }) => {
   };
 
   const closeTableBill = (tableId) => {
+    const tableObj = tables.find(t => t.id === tableId || t.number === tableId);
+    const tableNum = tableObj?.number;
+
     const updatedTables = tables.map(t => {
-      if (t.id === tableId) {
+      if (t.id === tableId || t.number === tableId) {
         return {
           ...t,
-          status: 'FREE',
+          status: 'free',
           currentOrder: null
         };
       }
       return t;
     });
 
-    const updatedAlarms = activeAlarms.filter(a => a.tableNumber !== tableId);
+    const updatedAlarms = activeAlarms.filter(a => 
+      a.tableId !== tableId && 
+      a.tableNumber !== tableId && 
+      (!tableNum || (a.tableNumber !== tableNum && String(a.tableNumber) !== String(tableNum)))
+    );
     setTables(updatedTables);
     setActiveAlarms(updatedAlarms);
+    if (updatedAlarms.length === 0) {
+      soundEngine.stopKitchenAlarm();
+      setLatestAlarm(null);
+    } else {
+      setLatestAlarm(updatedAlarms[updatedAlarms.length - 1]);
+    }
     saveRestoState({ tables: updatedTables });
     broadcastAction('TABLE_BILLED', { tables: updatedTables, activeAlarms: updatedAlarms });
   };
