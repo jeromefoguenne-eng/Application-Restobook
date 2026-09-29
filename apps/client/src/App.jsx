@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
+import { useAuth } from './context/AuthContext';
 import { useRestobook } from './context/RestobookContext';
+import { AuthView } from './views/auth/AuthView';
+import { PosteSelectorView } from './views/auth/PosteSelectorView';
 import { RestobookSalle } from './views/salle/RestobookSalle';
 import { RestobookKitchen } from './views/kitchen/RestobookKitchen';
 import { PairingModal } from './components/PairingModal';
@@ -14,14 +17,20 @@ import {
   UtensilsCrossed,
   Sparkles,
   Store,
-  Pencil
+  Pencil,
+  LogOut,
+  RefreshCw,
+  SlidersHorizontal
 } from 'lucide-react';
 
 export function App() {
+  const { currentUser, activePoste, changePoste, logout } = useAuth();
+
   const {
     activeMode,
     setActiveMode,
     connected,
+    cloudConnected,
     sessionId,
     restaurantName,
     enableSound,
@@ -32,9 +41,22 @@ export function App() {
   const [isPairingOpen, setIsPairingOpen] = useState(false);
   const [isEditNameOpen, setIsEditNameOpen] = useState(false);
 
+  // 1. Si l'utilisateur n'est pas connecté -> Afficher l'écran SaaS / Inscription / Démo
+  if (!currentUser) {
+    return <AuthView />;
+  }
+
+  // 2. Si l'utilisateur est connecté mais n'a pas sélectionné de poste -> Écran de choix de poste
+  if (!activePoste) {
+    return <PosteSelectorView />;
+  }
+
+  // 3. Application principale pour le poste choisi
+  const isOnline = cloudConnected || connected;
+
   return (
     <div className="flex flex-col h-screen w-screen bg-slate-950 text-slate-100 overflow-hidden">
-      {/* Barre Supérieure Globale & Sélecteur de Mode Tablette */}
+      {/* Barre Supérieure Globale */}
       <header className="h-14 px-4 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between z-20 backdrop-blur-md shrink-0">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
@@ -56,9 +78,31 @@ export function App() {
             </span>
             <Pencil className="w-3 h-3 text-slate-500 group-hover:text-yellow-400 transition-colors" />
           </button>
+
+          {/* Badge du Poste Actif sur cette tablette */}
+          <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-950 border border-slate-800 text-xs">
+            {activeMode === 'salle' && (
+              <span className="flex items-center gap-1 font-bold text-amber-400">
+                <UtensilsCrossed className="w-3 h-3" />
+                <span>Poste Salle</span>
+              </span>
+            )}
+            {activeMode === 'cuisine' && (
+              <span className="flex items-center gap-1 font-bold text-emerald-400">
+                <ChefHat className="w-3 h-3" />
+                <span>Poste Cuisine (KDS)</span>
+              </span>
+            )}
+            {activeMode === 'duo' && (
+              <span className="flex items-center gap-1 font-bold text-blue-400">
+                <Columns2 className="w-3 h-3" />
+                <span>Mode Duo</span>
+              </span>
+            )}
+          </div>
         </div>
 
-        {/* Sélecteur de vue (Tablette Salle / Tablette Cuisine / Duo Côte-à-Côte) */}
+        {/* Sélecteur rapide de vue (Tablette Salle / Cuisine / Duo) */}
         <div className="flex items-center bg-slate-950 p-1 rounded-2xl border border-slate-800 shadow-inner">
           <button
             onClick={() => setActiveMode('salle')}
@@ -69,7 +113,7 @@ export function App() {
             }`}
           >
             <Tablet className="w-3.5 h-3.5" />
-            <span className="hidden md:inline">Tablette</span> Salle (POS)
+            <span className="hidden md:inline">Tablette</span> Salle
             {activeAlarms.length > 0 && (
               <span className="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
             )}
@@ -84,7 +128,7 @@ export function App() {
             }`}
           >
             <ChefHat className="w-3.5 h-3.5" />
-            <span className="hidden md:inline">Tablette</span> Cuisine (KDS)
+            <span className="hidden md:inline">Tablette</span> Cuisine
           </button>
 
           <button
@@ -96,31 +140,43 @@ export function App() {
             }`}
           >
             <Columns2 className="w-3.5 h-3.5" />
-            <span>Simulateur Duo (2 Tablettes)</span>
+            <span className="hidden lg:inline">Simulateur</span> Duo
           </button>
         </div>
 
-        {/* Statut Réseau & Appairage QR Code */}
+        {/* Statut Cloud & Actions Compte */}
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setIsPairingOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-bold transition-colors"
-          >
-            <QrCode className="w-3.5 h-3.5 text-yellow-400" />
-            <span className="hidden lg:inline">Appairage QR Code</span>
-          </button>
-
+          {/* Indicateur Cloud Sync WSS */}
           <div
             className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold border ${
-              connected
+              isOnline
                 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
                 : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
             }`}
-            title={connected ? 'Connecté au serveur Cloud' : 'En attente de connexion'}
+            title={isOnline ? 'Synchronisation Cloud Realtime active' : 'Mode local / recherche réseau'}
           >
-            <Wifi className={`w-3.5 h-3.5 ${connected ? '' : 'animate-pulse'}`} />
-            <span className="hidden sm:inline">{connected ? 'Cloud En Ligne' : 'Hors Ligne'}</span>
+            <Wifi className={`w-3.5 h-3.5 ${isOnline ? '' : 'animate-pulse'}`} />
+            <span className="hidden sm:inline">{isOnline ? 'Cloud En Ligne' : 'Hors Ligne'}</span>
           </div>
+
+          {/* Bouton Changer de Poste */}
+          <button
+            onClick={changePoste}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition-colors"
+            title="Changer le rôle de cette tablette"
+          >
+            <SlidersHorizontal className="w-3.5 h-3.5" />
+            <span className="hidden xl:inline">Changer de poste</span>
+          </button>
+
+          {/* Bouton Déconnexion */}
+          <button
+            onClick={logout}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-red-500/10 hover:text-red-400 border border-slate-800 text-slate-400 text-xs font-bold transition-colors"
+            title="Déconnexion"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+          </button>
         </div>
       </header>
 
@@ -163,4 +219,5 @@ export function App() {
     </div>
   );
 }
+
 export default App;

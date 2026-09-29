@@ -1,81 +1,69 @@
-# Restobook - Guide de Déploiement & Comparatif des Formats
+# Restobook Cloud - Guide Officiel de Déploiement en Ligne (100% Gratuit & Pérenne)
 
-Bienvenue dans le guide officiel de déploiement et d'utilisation de **Restobook**, la solution connectée en temps réel associant :
-1. **Restobook Salle (POS)** : Plan de table interactif, réservations, gestion du menu, devises personnalisées, prise de commande tactile et facturation/partage d'addition.
-2. **Restobook Kitchen (KDS)** : Écran cuisine en direct, priorisation des bons (glisser-déposer tactile ou flèches), pointage des plats et alarme de rappel serveur au passe.
+Bienvenue dans la version **Restobook Cloud**, la solution SaaS moderne pour restaurants connectant instantanément vos tablettes de **Salle** et de **Cuisine** sans aucun serveur payant, sans configuration d'adresses IP locales et sans risque de coupure.
 
 ---
 
-## 1. Quel format privilégier : APK ou HTML / PWA ?
+## 1. Pourquoi cette architecture est 100% Gratuite et Pérenne à Vie ?
 
-### 🏆 Recommandation : Privilégier le format HTML / PWA (Progressive Web App)
-
-Pour une utilisation en restauration sur tablettes et smartphones (Android, iPad, etc.), le format **PWA (Web Mobile tactile autonome)** est **très nettement supérieur** au format APK classique pour les raisons suivantes :
-
-| Critère | Format HTML / PWA (Recommandé) 🌟 | Format APK classique 📱 |
-| :--- | :--- | :--- |
-| **Installation** | **Instantanée en 1 clic** via le navigateur Chrome/Safari ("Ajouter à l'écran d'accueil"). Pas de message d'alerte sécurité Android ("Sources inconnues"). | Nécessite d'activer le débogage ou l'autorisation d'installer des APK non certifiés sur chaque tablette. |
-| **Compatibilité** | **100% Universelle** : Fonctionne sur toutes les tablettes Android (Samsung, Lenovo, Xiaomi...), les iPad d'Apple, les smartphones et les ordinateurs PC/Mac. | Réservé uniquement aux appareils Android. Incompatible avec iPad ou iPhone. |
-| **Mises à jour** | **Instantanées et invisibles** : Dès que vous changez un prix ou une option, toutes les tablettes sont à jour sans rien réinstaller. | Obligation de désinstaller et réinstaller manuellement le fichier `.apk` sur chaque tablette. |
-| **Expérience visuelle** | **Plein écran immersif** identique à une application native du Play Store (sans barre d'adresse ni boutons du navigateur). | Plein écran natif. |
-| **Sonneries & Alarmes** | Prise en charge native de l'audio haute fidélité (Web Audio API) pour le carillon du passe. | Support audio natif. |
-| **Poids** | Léger et instantané (chargement en mémoire cache locale). | Fichier volumineux de 20 à 50 Mo par appareil. |
+Contrairement à des services qui s'endorment après quelques jours d'inactivité ou exigent une carte bancaire :
+- **Hébergement Frontend** : Déployable gratuitement sur **Vercel** ou **GitHub Pages** (disponible 24h/24 dans le monde entier en HTTPS sans frais).
+- **Synchronisation Temps Réel Mondiale** : Utilise le protocole **MQTT sur WebSockets sécurisés (WSS)** avec courtiers publics mondiaux (EMQX / HiveMQ) et canal local `BroadcastChannel`. 
+  - *Coût* : **0 € / mois à vie**.
+  - *Maintenance* : Aucun serveur à maintenir, ne s'endort jamais.
+  - *Sécurité & Isolation* : Chaque restaurant dispose d'un espace hermétique identifié par son propre identifiant (`restaurantId`).
+- **Persistance des Données (Offline-First)** : Vos plans de tables, cartes de menus, devises et réservations sont stockés dans le stockage persistant de vos tablettes et synchronisés automatiquement dès qu'un appareil se connecte.
 
 ---
 
-## 2. Comment installer l'application sur vos Tablettes & Smartphones
+## 2. Comment publier l'application en ligne en 2 minutes (Gratuit)
 
-### Sur Tablette ou Smartphone Android (Google Chrome)
-1. Ouvrez **Google Chrome** et saisissez l'adresse de l'application (ex : `http://192.168.0.112:4001` ou votre URL en ligne).
-2. Appuyez sur les **trois petits points verticaux** (menu en haut à droite).
-3. Sélectionnez **"Installer l'application"** ou **"Ajouter à l'écran d'accueil"**.
-4. L'icône officielle **Restobook** apparaît désormais sur l'écran d'accueil de la tablette.
-5. Lorsque vous appuyez dessus, l'application se lance en **plein écran**, sans aucune barre de navigation !
+### Option A : Déploiement en 1 clic sur Vercel (Recommandé)
+1. Rendez-vous sur [vercel.com](https://vercel.com) (connexion gratuite avec votre compte GitHub).
+2. Cliquez sur **"Add New..."** > **"Project"**.
+3. Sélectionnez le dépôt `jeromefoguenne-eng/Application-Restobook`.
+4. Dans le paramètre **Root Directory**, choisissez `apps/client`.
+5. Cliquez sur **"Deploy"**.
+6. En moins de 45 secondes, vous obtenez une URL publique permanente (ex: `https://application-restobook.vercel.app`) accessible depuis n'importe quelle tablette ou smartphone sur la planète !
 
-### Sur iPad ou iPhone (Safari)
-1. Ouvrez **Safari** et accédez à l'adresse de l'application.
-2. Appuyez sur l'icône de **Partage** (carré avec une flèche vers le haut).
-3. Faites défiler et choisissez **"Sur l'écran d'accueil"**.
-4. Validez en cliquant sur **Ajouter**.
+### Option B : Utilisation immédiate sans hébergeur
+Vous pouvez directement double-cliquer sur le fichier **`Restobook-Application-Autonome.html`** présent dans ce dossier Google Drive. Il contient toute l'application (SaaS, connexion, plan de table, cuisine et synchronisation en direct).
 
 ---
 
-## 3. Vous préférez tout de même générer un fichier APK ?
+## 3. Comment connecter deux tablettes (Salle & Cuisine)
 
-Nous avons configuré pour vous une chaîne d'intégration continue **GitHub Actions** (`.github/workflows/build-apk.yml`) qui permet de compiler un fichier APK dans le cloud sans installer 10 Go d'outils Android Studio sur votre machine :
+Le fonctionnement est devenu magique et totalement fluide :
 
-1. Rendez-vous sur votre dépôt GitHub : `https://github.com/jeromefoguenne-eng/Application-Restobook`
-2. Cliquez sur l'onglet **"Actions"**.
-3. Dans la liste à gauche, cliquez sur **"Build Android APK (Salle & Cuisine)"**.
-4. Cliquez sur le bouton déroulant **"Run workflow"** puis validez.
-5. En 3 minutes, GitHub compile l'application et met à disposition dans les **Artifacts** le fichier `Restobook-Android-APK.zip` contenant le fichier `.apk` installable directement sur n'importe quelle tablette Android.
+1. **Sur la Tablette 1 (Salle)** :
+   - Ouvrez l'application (URL en ligne ou fichier autonome).
+   - Créez votre restaurant (ex : *« Le Baobab Gourmand »*, devise *Franc CFA (FCFA)* ou *Euro*).
+   - Choisissez le rôle : **🍽️ Tablette Salle (POS & Plan de table)**.
+   - Cochez *"Mémoriser ce poste sur cette tablette"*.
+   
+2. **Sur la Tablette 2 (Cuisine)** :
+   - Ouvrez la même application.
+   - Connectez-vous avec le même email ou utilisez le compte.
+   - Choisissez le rôle : **👨‍🍳 Tablette Cuisine (KDS Écran Chef)**.
+   - Cochez *"Mémoriser ce poste sur cette tablette"*.
+
+3. **C’est tout !**
+   - Dès qu'une commande est envoyée depuis la Salle, le bon apparaît **instantanément** sur la Tablette Cuisine.
+   - Dès que le chef clique sur **"ENVOYER AU PASSE"**, la Tablette Salle émet son carillon sonore et clignote pour appeler le serveur.
+   - Si vous préférez tester sur un seul écran (PC ou démo), choisissez simplement le **Mode Duo**.
 
 ---
 
-## 4. Contenu du dossier d'export
+## 4. Contenu de ce dossier Google Drive
 
-Ce dossier contient tout le nécessaire pour démarrer immédiatement :
-
-- 📁 `Application-Web-PWA/` : L'application web prête pour la production (fichiers HTML, CSS, JavaScript compilés, icônes tactiles et manifest PWA).
-- ⚙️ `Lancer-Restobook.bat` : Script Windows en 1 clic pour lancer à la fois le serveur de synchronisation et l'application dans votre navigateur.
-- 📦 `Restobook-Code-Source-Complet.zip` : L'archive complète du code source (dépôt Git nettoyé, sans node_modules superflus).
-- 📄 `GUIDE_INSTALLATION_ET_FORMATS.md` : Le présent document explicatif.
+- 📄 **`Restobook-Application-Autonome.html`** : L'application complète en un seul fichier exécutable partout par simple double-clic.
+- 📁 **`Application-Web-PWA/`** : L'application web compilée prête à être hébergée ou installée en PWA sur tablettes ("Ajouter à l'écran d'accueil").
+- 📦 **`Restobook-Code-Source-Complet.zip`** : L'archive compressée complète du code source du projet.
+- ⚙️ **`Lancer-Restobook.bat`** : Le lanceur rapide local si vous souhaitez utiliser votre PC comme serveur Wi-Fi local sans connexion Internet.
+- 📄 **`GUIDE_INSTALLATION_ET_FORMATS.md`** : Le présent document.
 
 ---
 
-## 5. Comment démarrer en restaurant (Réseau Local ou Cloud)
+## 5. Devises supportées
 
-### Option A : En réseau local Wi-Fi (Idéal en restaurant)
-1. Double-cliquez sur `Lancer-Restobook.bat` sur votre PC central (ou caisse).
-2. Le terminal affiche l'adresse locale du serveur (ex : `http://192.168.0.112:4001`).
-3. Sur la **Tablette Salle**, ouvrez Chrome à cette adresse et choisissez **Restobook Salle**.
-4. Sur la **Tablette Cuisine**, ouvrez Chrome à cette adresse et choisissez **Restobook Kitchen**.
-5. Les deux écrans sont immédiatement synchronisés via WebSocket :
-   - Dès qu'une commande est envoyée depuis la salle, le ticket apparaît instantanément en cuisine avec son chronomètre.
-   - En cuisine, les cuisiniers peuvent réorganiser les tickets (glisser-déposer tactile ou flèches `<` / `>`) et cocher les plats préparés.
-   - Lorsque le cuisinier clique sur **"ENVOYER AU PASSE"**, la tablette salle déclenche une alarme sonore (carillon) et visuelle clignotante pour alerter les serveurs.
-
-### Option B : Déploiement Cloud (Accessible depuis n'importe où)
-- Le backend `apps/server` peut être déployé en 1 clic sur des hébergeurs gratuits comme **Render**, **Railway** ou votre propre serveur VPS.
-- Le frontend `apps/client` peut être hébergé sur **Vercel**, **Netlify** ou **GitHub Pages**.
-- Les tablettes peuvent ainsi être connectées même via la 4G/5G mobile !
+Pour répondre parfaitement aux besoins du projet **LabDra Bénin 25-26**, le **Franc CFA (FCFA - XOF)** est désormais proposé en tête de liste des devises, aux côtés de l'Euro (€), du Dollar ($), du Dirham marocain (DH), etc.
