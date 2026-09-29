@@ -287,6 +287,11 @@ export const RestobookProvider = ({ children }) => {
     }
   };
 
+  const handleServerMessageRef = useRef(handleServerMessage);
+  useEffect(() => {
+    handleServerMessageRef.current = handleServerMessage;
+  });
+
   // Connexion WebSocket au serveur local
   const connectWs = useCallback(() => {
     if (wsRef.current && (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING)) {
@@ -311,7 +316,7 @@ export const RestobookProvider = ({ children }) => {
       ws.onmessage = (event) => {
         try {
           const msg = JSON.parse(event.data);
-          handleServerMessage(msg);
+          handleServerMessageRef.current?.(msg);
         } catch (e) {
           console.error('Error parsing incoming WS message:', e);
         }
@@ -330,7 +335,7 @@ export const RestobookProvider = ({ children }) => {
     } catch (err) {
       // Standalone mode normal
     }
-  }, [currentUser, sessionId, activeMode, handleServerMessage]);
+  }, [currentUser?.restaurantId, sessionId, activeMode]);
 
   // Initialisation et liaison Cloud lors de la connexion du restaurant
   useEffect(() => {
@@ -448,7 +453,7 @@ export const RestobookProvider = ({ children }) => {
       if (msg.senderId === clientIdRef.current) return;
       // Isolation absolue par restaurantId
       if (msg.restaurantId && msg.restaurantId !== currentRestoId) return;
-      handleServerMessage(msg);
+      handleServerMessageRef.current?.(msg);
     });
 
     return () => {
@@ -457,7 +462,7 @@ export const RestobookProvider = ({ children }) => {
       unsubMsg();
       cloudSync.disconnect();
     };
-  }, [currentUser?.restaurantId, handleServerMessage]);
+  }, [currentUser?.restaurantId]);
 
   // Connexion au WebSocket local
   useEffect(() => {

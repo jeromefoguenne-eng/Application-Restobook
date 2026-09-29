@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X, Plus, Trash2, Utensils, Check, Flame } from 'lucide-react';
 
 const COMMON_ALLERGENS = [
@@ -16,27 +16,39 @@ export const MenuItemModal = ({ isOpen, onClose, onSave, itemToEdit, categories,
   const [hasCookingOption, setHasCookingOption] = useState(false);
   const [isAvailable, setIsAvailable] = useState(true);
 
+  const prevIsOpenRef = useRef(false);
+  const prevItemIdRef = useRef(null);
+
   useEffect(() => {
-    if (itemToEdit) {
-      setName(itemToEdit.name || '');
-      setCategoryId(itemToEdit.categoryId || defaultCategory || categories[0]?.id || 'cat_plats');
-      setDescription(itemToEdit.description || '');
-      setPrice(itemToEdit.price !== undefined ? itemToEdit.price.toString() : '15.00');
-      setVatRate(itemToEdit.vatRate !== undefined ? itemToEdit.vatRate.toString() : '10.0');
-      setAllergens(itemToEdit.allergens || []);
-      setHasCookingOption(Boolean(itemToEdit.modifierGroups?.some(g => g.id === 'cuisson')));
-      setIsAvailable(itemToEdit.isAvailable !== false && itemToEdit.available !== false);
-    } else {
-      setName('');
-      setCategoryId(defaultCategory || categories[0]?.id || 'cat_plats');
-      setDescription('');
-      setPrice(currency?.code === 'XOF' ? '1500' : '14.50');
-      setVatRate('10.0');
-      setAllergens([]);
-      setHasCookingOption(false);
-      setIsAvailable(true);
+    const isOpening = isOpen && !prevIsOpenRef.current;
+    const itemChanged = (itemToEdit?.id || null) !== prevItemIdRef.current;
+
+    // Réinitialise uniquement à l'ouverture du modal ou si on sélectionne un autre plat à éditer
+    if (isOpen && (isOpening || itemChanged)) {
+      if (itemToEdit) {
+        setName(itemToEdit.name || '');
+        setCategoryId(itemToEdit.categoryId || defaultCategory || categories[0]?.id || 'cat_plats');
+        setDescription(itemToEdit.description || '');
+        setPrice(itemToEdit.price !== undefined ? itemToEdit.price.toString() : '15.00');
+        setVatRate(itemToEdit.vatRate !== undefined ? itemToEdit.vatRate.toString() : '10.0');
+        setAllergens(itemToEdit.allergens || []);
+        setHasCookingOption(Boolean(itemToEdit.modifierGroups?.some(g => g.id === 'cuisson')));
+        setIsAvailable(itemToEdit.isAvailable !== false && itemToEdit.available !== false);
+      } else {
+        setName('');
+        setCategoryId(defaultCategory || categories[0]?.id || 'cat_plats');
+        setDescription('');
+        setPrice(currency?.code === 'XOF' ? '1500' : '14.50');
+        setVatRate('10.0');
+        setAllergens([]);
+        setHasCookingOption(false);
+        setIsAvailable(true);
+      }
     }
-  }, [itemToEdit, isOpen, categories, defaultCategory, currency]);
+
+    prevIsOpenRef.current = isOpen;
+    prevItemIdRef.current = itemToEdit?.id || null;
+  }, [isOpen, itemToEdit, defaultCategory, currency, categories]);
 
   if (!isOpen) return null;
 
@@ -106,6 +118,7 @@ export const MenuItemModal = ({ isOpen, onClose, onSave, itemToEdit, categories,
             <input
               type="text"
               required
+              autoFocus
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="Ex: Entrecôte grillée, Mojito passion, Tarte Tatin..."
