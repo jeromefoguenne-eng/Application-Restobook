@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { X, Plus, Trash2, Utensils, Check, Flame } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, Utensils, Flame } from 'lucide-react';
 
 const COMMON_ALLERGENS = [
   'Gluten', 'Lactose', 'Œufs', 'Poisson', 'Crustacés', 
@@ -7,50 +7,29 @@ const COMMON_ALLERGENS = [
 ];
 
 export const MenuItemModal = ({ isOpen, onClose, onSave, itemToEdit, categories, defaultCategory, currency }) => {
-  const [name, setName] = useState('');
-  const [categoryId, setCategoryId] = useState(defaultCategory || categories[0]?.id || 'cat_plats');
-  const [description, setDescription] = useState('');
-  const [price, setPrice] = useState('15.00');
-  const [vatRate, setVatRate] = useState('10.0');
-  const [allergens, setAllergens] = useState([]);
-  const [hasCookingOption, setHasCookingOption] = useState(false);
-  const [isAvailable, setIsAvailable] = useState(true);
-
-  const prevIsOpenRef = useRef(false);
-  const prevItemIdRef = useRef(null);
-
-  useEffect(() => {
-    const isOpening = isOpen && !prevIsOpenRef.current;
-    const itemChanged = (itemToEdit?.id || null) !== prevItemIdRef.current;
-
-    // Réinitialise uniquement à l'ouverture du modal ou si on sélectionne un autre plat à éditer
-    if (isOpen && (isOpening || itemChanged)) {
-      if (itemToEdit) {
-        setName(itemToEdit.name || '');
-        setCategoryId(itemToEdit.categoryId || defaultCategory || categories[0]?.id || 'cat_plats');
-        setDescription(itemToEdit.description || '');
-        setPrice(itemToEdit.price !== undefined ? itemToEdit.price.toString() : '15.00');
-        setVatRate(itemToEdit.vatRate !== undefined ? itemToEdit.vatRate.toString() : '10.0');
-        setAllergens(itemToEdit.allergens || []);
-        setHasCookingOption(Boolean(itemToEdit.modifierGroups?.some(g => g.id === 'cuisson')));
-        setIsAvailable(itemToEdit.isAvailable !== false && itemToEdit.available !== false);
-      } else {
-        setName('');
-        setCategoryId(defaultCategory || categories[0]?.id || 'cat_plats');
-        setDescription('');
-        setPrice(currency?.code === 'XOF' ? '1500' : '14.50');
-        setVatRate('10.0');
-        setAllergens([]);
-        setHasCookingOption(false);
-        setIsAvailable(true);
-      }
-    }
-
-    prevIsOpenRef.current = isOpen;
-    prevItemIdRef.current = itemToEdit?.id || null;
-  }, [isOpen, itemToEdit, defaultCategory, currency, categories]);
-
   if (!isOpen) return null;
+
+  // Initialisation directe à la création du composant (garanti sans écrasement intempestif)
+  const [name, setName] = useState(itemToEdit?.name || '');
+  const [categoryId, setCategoryId] = useState(
+    itemToEdit?.categoryId || defaultCategory || categories?.[0]?.id || 'cat_plats'
+  );
+  const [description, setDescription] = useState(itemToEdit?.description || '');
+  const [price, setPrice] = useState(
+    itemToEdit?.price !== undefined
+      ? String(itemToEdit.price)
+      : (currency?.code === 'XOF' ? '1500' : '14.50')
+  );
+  const [vatRate, setVatRate] = useState(
+    itemToEdit?.vatRate !== undefined ? String(itemToEdit.vatRate) : '10.0'
+  );
+  const [allergens, setAllergens] = useState(itemToEdit?.allergens || []);
+  const [hasCookingOption, setHasCookingOption] = useState(
+    Boolean(itemToEdit?.modifierGroups?.some(g => g.id === 'cuisson'))
+  );
+  const [isAvailable, setIsAvailable] = useState(
+    itemToEdit ? (itemToEdit.isAvailable !== false && itemToEdit.available !== false) : true
+  );
 
   const toggleAllergen = (alg) => {
     setAllergens(prev =>
@@ -72,13 +51,17 @@ export const MenuItemModal = ({ isOpen, onClose, onSave, itemToEdit, categories,
       });
     }
 
+    // Gestion propre des nombres avec virgule ou point
+    const cleanPrice = parseFloat(String(price).replace(',', '.')) || 0;
+    const cleanVat = parseFloat(String(vatRate).replace(',', '.')) || 10;
+
     const payload = {
       ...(itemToEdit ? { id: itemToEdit.id } : {}),
       name: name.trim(),
-      categoryId: categoryId || defaultCategory || categories[0]?.id || 'cat_plats',
+      categoryId: categoryId || defaultCategory || categories?.[0]?.id || 'cat_plats',
       description: description.trim(),
-      price: parseFloat(price) || 0,
-      vatRate: parseFloat(vatRate) || 10,
+      price: cleanPrice,
+      vatRate: cleanVat,
       allergens,
       modifierGroups,
       isAvailable: Boolean(isAvailable),
@@ -90,11 +73,19 @@ export const MenuItemModal = ({ isOpen, onClose, onSave, itemToEdit, categories,
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-2 sm:p-4 animate-in fade-in">
-      <div className="relative w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl text-slate-100 max-h-[94vh] overflow-y-auto">
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-2 sm:p-4 overflow-y-auto animate-in fade-in"
+      onClick={onClose}
+    >
+      <div
+        className="relative w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl text-slate-100 max-h-[94vh] overflow-y-auto my-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         <button
+          type="button"
           onClick={onClose}
           className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+          title="Fermer"
         >
           <X className="w-5 h-5" />
         </button>
@@ -119,10 +110,11 @@ export const MenuItemModal = ({ isOpen, onClose, onSave, itemToEdit, categories,
               type="text"
               required
               autoFocus
+              autoComplete="off"
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="Ex: Entrecôte grillée, Mojito passion, Tarte Tatin..."
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-yellow-500"
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-yellow-500 relative z-10 pointer-events-auto select-text"
             />
           </div>
 
@@ -132,9 +124,9 @@ export const MenuItemModal = ({ isOpen, onClose, onSave, itemToEdit, categories,
             <select
               value={categoryId}
               onChange={e => setCategoryId(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-yellow-500"
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-yellow-500 relative z-10 pointer-events-auto"
             >
-              {categories.map(cat => (
+              {(categories || []).map(cat => (
                 <option key={cat.id} value={cat.id}>
                   {cat.icon} {cat.name}
                 </option>
@@ -149,14 +141,14 @@ export const MenuItemModal = ({ isOpen, onClose, onSave, itemToEdit, categories,
                 Prix TTC ({currency?.symbol || '€'}) * :
               </label>
               <input
-                type="number"
-                step="any"
-                min="0"
+                type="text"
+                inputMode="decimal"
                 required
+                autoComplete="off"
                 value={price}
                 onChange={e => setPrice(e.target.value)}
                 placeholder={currency?.code === 'XOF' ? '1500' : '14.50'}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm font-mono text-white focus:outline-none focus:border-yellow-500"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm font-mono text-white focus:outline-none focus:border-yellow-500 relative z-10 pointer-events-auto select-text"
               />
             </div>
             <div>
@@ -164,7 +156,7 @@ export const MenuItemModal = ({ isOpen, onClose, onSave, itemToEdit, categories,
               <select
                 value={vatRate}
                 onChange={e => setVatRate(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-yellow-500"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-yellow-500 relative z-10 pointer-events-auto"
               >
                 <option value="10.0">10% (Alimentation & Softs)</option>
                 <option value="20.0">20% (Alcools & Vins)</option>
@@ -178,10 +170,11 @@ export const MenuItemModal = ({ isOpen, onClose, onSave, itemToEdit, categories,
             <label className="text-xs font-bold text-slate-300 block mb-1.5">Description & Ingrédients :</label>
             <textarea
               rows={2}
+              autoComplete="off"
               value={description}
               onChange={e => setDescription(e.target.value)}
               placeholder="Ex: Viande maturée 21 jours, sauce béarnaise maison, frites fraîches..."
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-yellow-500"
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-yellow-500 relative z-10 pointer-events-auto select-text"
             />
           </div>
 
@@ -198,7 +191,7 @@ export const MenuItemModal = ({ isOpen, onClose, onSave, itemToEdit, categories,
               type="checkbox"
               checked={hasCookingOption}
               onChange={e => setHasCookingOption(e.target.checked)}
-              className="w-5 h-5 accent-yellow-500 rounded cursor-pointer"
+              className="w-5 h-5 accent-yellow-500 rounded cursor-pointer relative z-10"
             />
           </div>
 

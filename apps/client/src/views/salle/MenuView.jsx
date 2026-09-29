@@ -312,15 +312,18 @@ export const MenuView = () => {
       </div>
 
       {/* Modal d'Ajout / Modification */}
-      <MenuItemModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSave={handleSave}
-        itemToEdit={itemToEdit}
-        categories={menuCategories}
-        defaultCategory={defaultCategoryForModal}
-        currency={currency}
-      />
+      {isModalOpen && (
+        <MenuItemModal
+          key={itemToEdit ? itemToEdit.id : `new_${defaultCategoryForModal}`}
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onSave={handleSave}
+          itemToEdit={itemToEdit}
+          categories={menuCategories}
+          defaultCategory={defaultCategoryForModal}
+          currency={currency}
+        />
+      )}
 
       {/* Modal de Création de Catégorie */}
       {isAddCatModalOpen && (
