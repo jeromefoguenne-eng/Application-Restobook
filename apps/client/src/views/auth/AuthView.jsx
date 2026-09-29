@@ -66,24 +66,25 @@ export const AuthView = () => {
   return (
     <div className="min-h-screen w-screen bg-slate-950 text-slate-100 flex flex-col justify-between overflow-y-auto selection:bg-amber-500 selection:text-slate-950">
       {/* En-tête de marque */}
-      <header className="px-6 py-5 flex items-center justify-between border-b border-slate-900 bg-slate-950/80 backdrop-blur-md">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-xl shadow-lg shadow-amber-500/10">
+      <header className="px-3 sm:px-6 py-3 sm:py-5 flex items-center justify-between border-b border-slate-900 bg-slate-950/80 backdrop-blur-md">
+        <div className="flex items-center gap-2.5 sm:gap-3">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-lg sm:text-xl shadow-lg shadow-amber-500/10 shrink-0">
             🍽️
           </div>
           <div>
-            <span className="font-extrabold text-lg tracking-tight bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 bg-clip-text text-transparent">
+            <span className="font-extrabold text-base sm:text-lg tracking-tight bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 bg-clip-text text-transparent">
               Restobook Cloud
             </span>
-            <span className="ml-2 text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold uppercase tracking-wider">
-              100% Gratuit & Pérenne
+            <span className="ml-2 text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold uppercase tracking-wider hidden xs:inline-block">
+              100% Gratuit
             </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 text-xs text-slate-400">
+        <div className="flex items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs text-slate-400">
           <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span>Cloud Realtime Actif</span>
+          <span className="hidden sm:inline">Cloud Realtime Actif</span>
+          <span className="sm:hidden">En ligne</span>
         </div>
       </header>
 

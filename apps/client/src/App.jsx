@@ -57,11 +57,11 @@ export function App() {
   return (
     <div className="flex flex-col h-screen w-screen bg-slate-950 text-slate-100 overflow-hidden">
       {/* Barre Supérieure Globale */}
-      <header className="h-14 px-4 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between z-20 backdrop-blur-md shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <span className="text-xl">🍽️</span>
-            <span className="font-extrabold text-base tracking-tight bg-gradient-to-r from-yellow-400 via-amber-300 to-yellow-500 bg-clip-text text-transparent">
+      <header className="h-14 px-2 sm:px-4 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between z-20 backdrop-blur-md shrink-0 gap-1.5 sm:gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <span className="text-lg sm:text-xl">🍽️</span>
+            <span className="font-extrabold text-sm sm:text-base tracking-tight bg-gradient-to-r from-yellow-400 via-amber-300 to-yellow-500 bg-clip-text text-transparent hidden xs:inline">
               Restobook
             </span>
           </div>
@@ -69,18 +69,18 @@ export function App() {
           {/* Bouton Nom du Restaurant modifiable */}
           <button
             onClick={() => setIsEditNameOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1 bg-slate-950/80 hover:bg-slate-800 border border-slate-800 hover:border-yellow-500/40 rounded-xl transition-all group"
+            className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 bg-slate-950/80 hover:bg-slate-800 border border-slate-800 hover:border-yellow-500/40 rounded-xl transition-all group max-w-[100px] xs:max-w-[130px] sm:max-w-xs"
             title="Cliquer pour changer le nom du restaurant"
           >
-            <Store className="w-3.5 h-3.5 text-yellow-400" />
-            <span className="text-xs font-bold text-white group-hover:text-yellow-400 transition-colors">
+            <Store className="w-3.5 h-3.5 text-yellow-400 shrink-0" />
+            <span className="text-xs font-bold text-white group-hover:text-yellow-400 transition-colors truncate">
               {restaurantName}
             </span>
-            <Pencil className="w-3 h-3 text-slate-500 group-hover:text-yellow-400 transition-colors" />
+            <Pencil className="w-3 h-3 text-slate-500 group-hover:text-yellow-400 transition-colors shrink-0 hidden sm:inline" />
           </button>
 
           {/* Badge du Poste Actif sur cette tablette */}
-          <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-950 border border-slate-800 text-xs">
+          <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-950 border border-slate-800 text-xs shrink-0">
             {activeMode === 'salle' && (
               <span className="flex items-center gap-1 font-bold text-amber-400">
                 <UtensilsCrossed className="w-3 h-3" />
@@ -103,52 +103,55 @@ export function App() {
         </div>
 
         {/* Sélecteur rapide de vue (Tablette Salle / Cuisine / Duo) */}
-        <div className="flex items-center bg-slate-950 p-1 rounded-2xl border border-slate-800 shadow-inner">
+        <div className="flex items-center bg-slate-950 p-0.5 sm:p-1 rounded-2xl border border-slate-800 shadow-inner shrink-0">
           <button
             onClick={() => setActiveMode('salle')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+            className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl text-xs font-bold transition-all ${
               activeMode === 'salle'
                 ? 'bg-yellow-500 text-slate-950 shadow-md shadow-yellow-500/20'
                 : 'text-slate-400 hover:text-white'
             }`}
+            title="Poste Salle"
           >
-            <Tablet className="w-3.5 h-3.5" />
-            <span className="hidden md:inline">Tablette</span> Salle
+            <Tablet className="w-3.5 h-3.5 shrink-0" />
+            <span className="hidden sm:inline">Salle</span>
             {activeAlarms.length > 0 && (
-              <span className="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
+              <span className="w-2 h-2 rounded-full bg-red-500 animate-ping shrink-0"></span>
             )}
           </button>
 
           <button
             onClick={() => setActiveMode('cuisine')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+            className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl text-xs font-bold transition-all ${
               activeMode === 'cuisine'
                 ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
                 : 'text-slate-400 hover:text-white'
             }`}
+            title="Poste Cuisine (KDS)"
           >
-            <ChefHat className="w-3.5 h-3.5" />
-            <span className="hidden md:inline">Tablette</span> Cuisine
+            <ChefHat className="w-3.5 h-3.5 shrink-0" />
+            <span className="hidden sm:inline">Cuisine</span>
           </button>
 
           <button
             onClick={() => setActiveMode('duo')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+            className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl text-xs font-bold transition-all ${
               activeMode === 'duo'
                 ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
                 : 'text-slate-400 hover:text-white'
             }`}
+            title="Simulateur Duo"
           >
-            <Columns2 className="w-3.5 h-3.5" />
-            <span className="hidden lg:inline">Simulateur</span> Duo
+            <Columns2 className="w-3.5 h-3.5 shrink-0" />
+            <span className="hidden md:inline">Duo</span>
           </button>
         </div>
 
         {/* Statut Cloud & Actions Compte */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           {/* Indicateur Cloud Sync WSS */}
           <div
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold border ${
+            className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-xl text-xs font-semibold border ${
               isOnline
                 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
                 : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
@@ -156,14 +159,14 @@ export function App() {
             title={isOnline ? 'Synchronisation Cloud Realtime active' : 'Mode local / recherche réseau'}
           >
             <Wifi className={`w-3.5 h-3.5 ${isOnline ? '' : 'animate-pulse'}`} />
-            <span className="hidden sm:inline">{isOnline ? 'Cloud En Ligne' : 'Hors Ligne'}</span>
+            <span className="hidden sm:inline">{isOnline ? 'En ligne' : 'Hors Ligne'}</span>
           </div>
 
           {/* Bouton Changer de Poste */}
           <button
             onClick={changePoste}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition-colors"
-            title="Changer le rôle de cette tablette"
+            className="flex items-center gap-1 p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition-colors"
+            title="Changer le rôle de cette tablette / smartphone"
           >
             <SlidersHorizontal className="w-3.5 h-3.5" />
             <span className="hidden xl:inline">Changer de poste</span>
@@ -172,7 +175,7 @@ export function App() {
           {/* Bouton Déconnexion */}
           <button
             onClick={logout}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-red-500/10 hover:text-red-400 border border-slate-800 text-slate-400 text-xs font-bold transition-colors"
+            className="flex items-center gap-1 p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl bg-slate-900 hover:bg-red-500/10 hover:text-red-400 border border-slate-800 text-slate-400 text-xs font-bold transition-colors"
             title="Déconnexion"
           >
             <LogOut className="w-3.5 h-3.5" />

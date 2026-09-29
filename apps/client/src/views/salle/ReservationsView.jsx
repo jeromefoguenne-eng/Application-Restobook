@@ -47,46 +47,46 @@ export const ReservationsView = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col p-6 bg-slate-950 overflow-y-auto">
-      <div className="flex items-center justify-between pb-4 border-b border-slate-800 mb-6">
+    <div className="flex-1 flex flex-col p-3 sm:p-6 bg-slate-950 overflow-y-auto">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 sm:pb-4 border-b border-slate-800 mb-4 sm:mb-6">
         <div>
-          <h2 className="text-xl font-bold flex items-center gap-2">
+          <h2 className="text-lg sm:text-xl font-bold flex items-center gap-2">
             <Calendar className="w-5 h-5 text-yellow-400" />
             Cahier des Réservations
           </h2>
-          <p className="text-xs text-slate-400">Gestion des services et attribution des tables</p>
+          <p className="text-[11px] sm:text-xs text-slate-400">Gestion des services et attribution des tables</p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
           {/* Sélecteur de service */}
           <div className="flex bg-slate-900 border border-slate-800 p-1 rounded-2xl">
             <button
               onClick={() => setSelectedService('midi')}
-              className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              className={`px-3 sm:px-4 py-1 sm:py-1.5 rounded-xl text-xs font-bold transition-all ${
                 selectedService === 'midi'
                   ? 'bg-yellow-500 text-slate-950 shadow-md shadow-yellow-500/20'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              ☀️ Service Midi
+              ☀️ Midi
             </button>
             <button
               onClick={() => setSelectedService('soir')}
-              className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              className={`px-3 sm:px-4 py-1 sm:py-1.5 rounded-xl text-xs font-bold transition-all ${
                 selectedService === 'soir'
                   ? 'bg-yellow-500 text-slate-950 shadow-md shadow-yellow-500/20'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              🌙 Service Soir
+              🌙 Soir
             </button>
           </div>
 
           <button
             onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-bold rounded-2xl text-xs shadow-lg shadow-yellow-500/20 transition-all active:scale-95"
+            className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-bold rounded-2xl text-xs shadow-lg shadow-yellow-500/20 transition-all active:scale-95 whitespace-nowrap"
           >
-            <Plus className="w-4 h-4" /> Nouvelle Réservation
+            <Plus className="w-4 h-4" /> <span>Nouvelle Résa</span>
           </button>
         </div>
       </div>

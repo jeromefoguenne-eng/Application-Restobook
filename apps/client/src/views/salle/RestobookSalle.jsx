@@ -29,31 +29,36 @@ export const RestobookSalle = () => {
       <AlarmBanner />
 
       {/* Barre de navigation interne Salle */}
-      <div className="flex items-center justify-between px-6 py-3 bg-slate-900 border-b border-slate-800 z-10">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 flex items-center justify-center font-bold text-lg">
+      <div className="flex flex-wrap sm:flex-nowrap items-center justify-between px-3 sm:px-6 py-2.5 sm:py-3 bg-slate-900 border-b border-slate-800 z-10 gap-2">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 flex items-center justify-center font-bold text-base sm:text-lg shrink-0">
             🍽️
           </div>
           <div>
-            <h1 className="text-base font-extrabold flex items-center gap-2">
-              Restobook Salle <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400 font-semibold border border-yellow-500/30">POS Tablette</span>
+            <h1 className="text-sm sm:text-base font-extrabold flex items-center gap-1.5 sm:gap-2">
+              <span>Salle</span>
+              <span className="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400 font-semibold border border-yellow-500/30">
+                POS
+              </span>
             </h1>
-            <p className="text-[11px] text-slate-400">Prise de commande, plan de table & facturation</p>
+            <p className="text-[10px] sm:text-[11px] text-slate-400 hidden sm:block">
+              Prise de commande, plan de table & facturation
+            </p>
           </div>
         </div>
 
         {/* Onglets de navigation */}
-        <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-2xl border border-slate-800">
+        <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-2xl border border-slate-800 shrink-0">
           <button
             onClick={() => setActiveTab('floor')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+            className={`flex items-center gap-1.5 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs font-bold transition-all ${
               activeTab === 'floor'
                 ? 'bg-yellow-500 text-slate-950 shadow-md shadow-yellow-500/20'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            <Map className="w-4 h-4" />
-            <span>Plan de Table</span>
+            <Map className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span>Plan</span>
             {activeAlarms.length > 0 && (
               <span className="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
             )}
@@ -61,44 +66,47 @@ export const RestobookSalle = () => {
 
           <button
             onClick={() => setActiveTab('reservations')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+            className={`flex items-center gap-1.5 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs font-bold transition-all ${
               activeTab === 'reservations'
                 ? 'bg-yellow-500 text-slate-950 shadow-md shadow-yellow-500/20'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            <Calendar className="w-4 h-4" />
-            <span>Réservations</span>
+            <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span className="hidden xs:inline">Réservations</span>
+            <span className="xs:hidden">Résas</span>
           </button>
 
           <button
             onClick={() => setActiveTab('menu')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+            className={`flex items-center gap-1.5 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs font-bold transition-all ${
               activeTab === 'menu'
                 ? 'bg-yellow-500 text-slate-950 shadow-md shadow-yellow-500/20'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            <Utensils className="w-4 h-4" />
-            <span>Carte & Prix</span>
+            <Utensils className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span className="hidden xs:inline">Carte & Prix</span>
+            <span className="xs:hidden">Carte</span>
           </button>
         </div>
 
         {/* Bouton d'activation audio / alarme */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           {!soundEnabled ? (
             <button
               onClick={enableSound}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600/20 hover:bg-red-600/30 text-red-300 border border-red-500/30 rounded-xl text-xs font-bold transition-colors animate-pulse"
-              title="Activer le son des alarmes"
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-red-600/20 hover:bg-red-600/30 text-red-300 border border-red-500/30 rounded-xl text-xs font-bold transition-colors animate-pulse"
+              title="Activer le son des alarmes de cuisine"
             >
-              <Volume2 className="w-4 h-4" />
-              <span>Activer Alarme Sonore</span>
+              <Volume2 className="w-4 h-4 shrink-0" />
+              <span className="hidden sm:inline">Activer Alarme Sonore</span>
+              <span className="sm:hidden text-[10px]">Son</span>
             </button>
           ) : (
-            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-xl text-xs font-semibold">
-              <Volume2 className="w-4 h-4 text-emerald-400" />
-              <span>Son Actif</span>
+            <div className="flex items-center gap-1 px-2 sm:px-3 py-1.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-xl text-xs font-semibold">
+              <Volume2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400" />
+              <span className="hidden sm:inline">Son Actif</span>
             </div>
           )}
         </div>

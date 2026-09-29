@@ -64,31 +64,31 @@ export const MenuView = () => {
     : menuCategories.filter(cat => cat.id === selectedCategoryTab);
 
   return (
-    <div className="flex-1 flex flex-col p-6 bg-slate-950 overflow-y-auto">
+    <div className="flex-1 flex flex-col p-3 sm:p-6 bg-slate-950 overflow-y-auto">
       {/* En-tête : Titre + Sélecteur de Devise + Bouton Ajouter */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-800 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 sm:pb-4 border-b border-slate-800 mb-4 sm:mb-6">
         <div>
-          <h2 className="text-xl font-bold flex items-center gap-2">
+          <h2 className="text-lg sm:text-xl font-bold flex items-center gap-2">
             <Utensils className="w-5 h-5 text-yellow-400" />
             Carte du Restaurant
           </h2>
-          <p className="text-xs text-slate-400">
+          <p className="text-[11px] sm:text-xs text-slate-400">
             Séparez vos Entrées, Plats, Boissons & Desserts et configurez la devise de votre choix
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
           {/* Sélecteur de Devise Monétaire */}
-          <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-2xl">
-            <Coins className="w-4 h-4 text-yellow-400" />
-            <span className="text-xs text-slate-400 font-medium">Devise :</span>
+          <div className="flex items-center gap-1.5 sm:gap-2 bg-slate-900 border border-slate-800 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-2xl">
+            <Coins className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-yellow-400" />
+            <span className="text-[11px] sm:text-xs text-slate-400 font-medium hidden xs:inline">Devise :</span>
             <select
               value={currency.code}
               onChange={(e) => {
                 const found = AVAILABLE_CURRENCIES.find(c => c.code === e.target.value);
                 if (found) changeCurrency(found);
               }}
-              className="bg-slate-950 border border-slate-700 text-xs font-bold text-yellow-400 px-2.5 py-1 rounded-xl focus:outline-none focus:border-yellow-500 cursor-pointer"
+              className="bg-slate-950 border border-slate-700 text-xs font-bold text-yellow-400 px-2 py-1 rounded-xl focus:outline-none focus:border-yellow-500 cursor-pointer"
             >
               {AVAILABLE_CURRENCIES.map(curr => (
                 <option key={curr.code} value={curr.code}>
@@ -100,10 +100,10 @@ export const MenuView = () => {
 
           <button
             onClick={() => handleOpenAdd(selectedCategoryTab !== 'all' ? selectedCategoryTab : 'cat_plats')}
-            className="flex items-center gap-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-black rounded-2xl text-xs shadow-lg shadow-yellow-500/20 transition-all active:scale-95 whitespace-nowrap"
+            className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-black rounded-2xl text-xs shadow-lg shadow-yellow-500/20 transition-all active:scale-95 whitespace-nowrap"
           >
-            <Plus className="w-4 h-4" />
-            <span>Ajouter à la carte</span>
+            <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span>Ajouter plat</span>
           </button>
         </div>
       </div>
