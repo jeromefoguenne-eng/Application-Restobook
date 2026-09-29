@@ -348,18 +348,66 @@ export const RestobookProvider = ({ children }) => {
       setPairingCode(currentUser.restaurantCode);
     }
 
+    // Réinitialisation immédiate des alarmes lors d'un switch de restaurant
+    setActiveAlarms([]);
+    setLatestAlarm(null);
+    soundEngine.stopKitchenAlarm();
+
     // Charger l'état sauvegardé en localStorage pour ce restaurant
     try {
       const savedRaw = localStorage.getItem(`restobook_state_${currentRestoId}`);
       if (savedRaw) {
         const parsed = JSON.parse(savedRaw);
         if (parsed.tables) setTables(parsed.tables);
-        if (parsed.tickets) setTickets(parsed.tickets);
+        if (parsed.tickets) {
+          const uniqueTickets = (parsed.tickets || []).filter(
+            (t, idx, self) => idx === self.findIndex(o => o.id === t.id)
+          );
+          setTickets(uniqueTickets);
+        } else {
+          setTickets([]);
+        }
         if (parsed.menuCategories) setMenuCategories(parsed.menuCategories);
         if (parsed.menuItems) setMenuItems(parsed.menuItems);
-        if (parsed.reservations) setReservations(parsed.reservations);
+        if (parsed.reservations) setReservations(parsed.reservations || []);
         if (parsed.restaurantName) setRestaurantName(parsed.restaurantName);
         if (parsed.currency) setCurrency(parsed.currency);
+      } else {
+        // Nouveau projet de restaurant : Carte et plan 100% indépendants
+        const initialTables = JSON.parse(JSON.stringify(mockTables || []));
+        const initialCategories = JSON.parse(JSON.stringify(mockMenuCategories || []));
+        let initialMenuItems = [];
+
+        if (currentRestoId === 'resto_demo_central') {
+          initialMenuItems = JSON.parse(JSON.stringify(mockMenuItems || []));
+        } else {
+          // Pour chaque nouveau projet, cloner le catalogue de base avec des identifiants uniques propres à CE restaurant
+          initialMenuItems = (mockMenuItems || []).map((it, idx) => ({
+            ...it,
+            id: `item_${currentRestoId}_${idx + 1}`,
+            available: true,
+            isAvailable: true
+          }));
+        }
+
+        setTables(initialTables);
+        setTickets([]);
+        setMenuCategories(initialCategories);
+        setMenuItems(initialMenuItems);
+        setReservations([]);
+
+        const initialState = {
+          tables: initialTables,
+          tickets: [],
+          menuCategories: initialCategories,
+          menuItems: initialMenuItems,
+          reservations: [],
+          restaurantName: currentUser?.restaurantName || 'Mon Restaurant',
+          currency: currentUser?.currency || AVAILABLE_CURRENCIES[0]
+        };
+
+        localStorage.setItem(`restobook_state_${currentRestoId}`, JSON.stringify(initialState));
+        cloudSync.publishProjectState(currentRestoId, initialState);
       }
     } catch (e) {
       console.warn('Erreur lecture cache local restaurant:', e);
@@ -658,10 +706,17 @@ export const RestobookProvider = ({ children }) => {
   };
 
   const addMenuItem = (itemData) => {
+    const rId = currentUser?.restaurantId || sessionId;
+    const isAvail = itemData.available !== undefined 
+      ? Boolean(itemData.available) 
+      : (itemData.isAvailable !== undefined ? Boolean(itemData.isAvailable) : true);
+
     const newItem = {
-      id: `item_${Date.now()}`,
-      available: true,
-      ...itemData
+      id: `item_${rId}_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      available: isAvail,
+      isAvailable: isAvail,
+      ...itemData,
+      price: Number(itemData.price) || 0
     };
     const updated = [...menuItems, newItem];
     setMenuItems(updated);
@@ -670,7 +725,21 @@ export const RestobookProvider = ({ children }) => {
   };
 
   const updateMenuItem = (itemData) => {
-    const updated = menuItems.map(it => it.id === itemData.id ? { ...it, ...itemData } : it);
+    const updated = menuItems.map(it => {
+      if (it.id === itemData.id) {
+        const isAvail = itemData.available !== undefined 
+          ? Boolean(itemData.available) 
+          : (itemData.isAvailable !== undefined ? Boolean(itemData.isAvailable) : Boolean(it.available ?? it.isAvailable ?? true));
+        return {
+          ...it,
+          ...itemData,
+          available: isAvail,
+          isAvailable: isAvail,
+          price: itemData.price !== undefined ? (Number(itemData.price) || 0) : it.price
+        };
+      }
+      return it;
+    });
     setMenuItems(updated);
     saveRestoState({ menuItems: updated });
     broadcastAction('MENU_UPDATED', { menuItems: updated });
@@ -684,10 +753,31 @@ export const RestobookProvider = ({ children }) => {
   };
 
   const toggleItemAvailability = (itemId) => {
-    const updated = menuItems.map(it => it.id === itemId ? { ...it, available: !it.available } : it);
+    const updated = menuItems.map(it => {
+      if (it.id === itemId) {
+        const nextAvail = !(it.available ?? it.isAvailable ?? true);
+        return { ...it, available: nextAvail, isAvailable: nextAvail };
+      }
+      return it;
+    });
     setMenuItems(updated);
     saveRestoState({ menuItems: updated });
     broadcastAction('MENU_UPDATED', { menuItems: updated });
+  };
+
+  const addMenuCategory = (categoryData) => {
+    const rId = currentUser?.restaurantId || sessionId;
+    const newCat = {
+      id: `cat_${rId}_${Date.now()}`,
+      name: categoryData.name.trim(),
+      icon: categoryData.icon || '🍽️',
+      order: menuCategories.length + 1
+    };
+    const updated = [...menuCategories, newCat];
+    setMenuCategories(updated);
+    saveRestoState({ menuCategories: updated });
+    broadcastAction('MENU_CATEGORIES_UPDATED', { menuCategories: updated });
+    return newCat;
   };
 
   const changeCurrency = (newCurrency) => {
@@ -748,6 +838,7 @@ export const RestobookProvider = ({ children }) => {
         updateMenuItem,
         deleteMenuItem,
         toggleItemAvailability,
+        addMenuCategory,
         currency,
         changeCurrency,
         formatPrice,

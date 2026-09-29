@@ -34,7 +34,10 @@ export const BillingModal = ({ table, onClose }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-0 sm:p-4 animate-in fade-in">
-      <div className="relative w-full max-w-lg h-full sm:h-auto max-h-none sm:max-h-[92vh] bg-slate-900 border-0 sm:border border-slate-800 rounded-none sm:rounded-3xl shadow-2xl overflow-y-auto text-slate-100 p-4 sm:p-6 flex flex-col justify-between">
+      <div 
+        className="relative w-full max-w-lg h-full sm:h-auto max-h-none sm:max-h-[92vh] bg-slate-900 border-0 sm:border border-slate-800 rounded-none sm:rounded-3xl shadow-2xl overflow-y-auto text-slate-100 p-4 sm:p-6 flex flex-col justify-between"
+        style={{ touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}
+      >
         <div>
           <div className="flex items-center justify-between pb-3 sm:pb-4 border-b border-slate-800">
             <div>
@@ -53,7 +56,10 @@ export const BillingModal = ({ table, onClose }) => {
           </div>
 
         {/* Détail de l'addition */}
-        <div className="my-4 max-h-48 overflow-y-auto space-y-2 pr-1">
+        <div 
+          className="my-4 max-h-48 overflow-y-auto space-y-2 pr-1"
+          style={{ touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}
+        >
           {allItems.length > 0 ? (
             allItems.map((it, idx) => (
               <div key={idx} className="flex justify-between items-center text-xs py-1 border-b border-slate-800/50">

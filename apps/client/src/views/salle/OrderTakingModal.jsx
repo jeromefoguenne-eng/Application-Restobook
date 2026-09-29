@@ -220,7 +220,10 @@ export const OrderTakingModal = ({ table, onClose, onOpenBilling }) => {
             </div>
 
             {/* Onglets des catégories */}
-            <div className="flex gap-1.5 sm:gap-2 overflow-x-auto pb-2 scrollbar-none shrink-0">
+            <div 
+              className="flex gap-1.5 sm:gap-2 overflow-x-auto pb-2 scrollbar-none shrink-0"
+              style={{ touchAction: 'pan-x', WebkitOverflowScrolling: 'touch' }}
+            >
               {menuCategories.map(cat => (
                 <button
                   key={cat.id}
@@ -238,9 +241,12 @@ export const OrderTakingModal = ({ table, onClose, onOpenBilling }) => {
             </div>
 
             {/* Grille des articles du menu */}
-            <div className="flex-1 overflow-y-auto grid grid-cols-2 md:grid-cols-3 gap-2 sm:gap-3 pr-1 pt-1 content-start">
+            <div 
+              className="flex-1 overflow-y-auto grid grid-cols-2 md:grid-cols-3 gap-2 sm:gap-3 pr-1 pt-1 content-start"
+              style={{ touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}
+            >
               {filteredItems.map(item => {
-                const isAvailable = item.isAvailable !== false;
+                const isAvailable = item.isAvailable !== false && item.available !== false;
                 const inCart = cartItems.find(ci => ci.id === item.id);
 
                 return (
@@ -325,7 +331,10 @@ export const OrderTakingModal = ({ table, onClose, onOpenBilling }) => {
             </div>
 
             {/* Liste des articles du panier */}
-            <div className="flex-1 overflow-y-auto py-2 sm:py-3 space-y-2 pr-1">
+            <div 
+              className="flex-1 overflow-y-auto py-2 sm:py-3 space-y-2 pr-1"
+              style={{ touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}
+            >
               {cartItems.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-500">
                   <div className="w-12 h-12 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center mb-2">

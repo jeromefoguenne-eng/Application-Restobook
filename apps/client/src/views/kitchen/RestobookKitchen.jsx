@@ -167,7 +167,10 @@ export const RestobookKitchen = () => {
       </div>
 
       {/* Grille horizontale des bons de commande avec snap tactile sur smartphone */}
-      <div className="flex-1 overflow-x-auto p-2.5 sm:p-4 flex gap-3 sm:gap-4 items-start scrollbar-thin snap-x snap-mandatory">
+      <div 
+        className="flex-1 overflow-x-auto p-2.5 sm:p-4 flex gap-3 sm:gap-4 items-start scrollbar-thin snap-x snap-mandatory"
+        style={{ touchAction: 'pan-x', WebkitOverflowScrolling: 'touch' }}
+      >
         {activeTab === 'active' && activeTickets.length === 0 && (
           <div className="w-full h-full flex flex-col items-center justify-center text-center p-8 text-slate-500">
             <div className="w-16 h-16 rounded-3xl bg-slate-900 border border-slate-800 flex items-center justify-center text-3xl mb-3 shadow-inner">
@@ -187,8 +190,6 @@ export const RestobookKitchen = () => {
           return (
             <div
               key={ticket.id}
-              draggable
-              onDragStart={(e) => handleDragStart(e, ticket.id)}
               onDragOver={handleDragOver}
               onDrop={(e) => handleDropOnTicket(e, ticket.id)}
               className="w-[88vw] max-w-[340px] sm:w-80 md:w-88 shrink-0 snap-center bg-slate-900 border-2 border-slate-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col transition-all hover:border-slate-700 select-none"
@@ -197,6 +198,8 @@ export const RestobookKitchen = () => {
               <div className="p-3.5 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, ticket.id)}
                     className="cursor-grab active:cursor-grabbing p-1 text-slate-500 hover:text-slate-300"
                     title="Glisser pour réorganiser l'ordre"
                   >
@@ -242,7 +245,10 @@ export const RestobookKitchen = () => {
               </div>
 
               {/* Liste des plats à préparer */}
-              <div className="p-4 flex-1 space-y-2.5 max-h-[55vh] overflow-y-auto">
+              <div 
+                className="p-4 flex-1 space-y-2.5 max-h-[55vh] overflow-y-auto"
+                style={{ touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}
+              >
                 {ticket.items.map((item) => {
                   const isDone = item.status === 'ready';
                   return (

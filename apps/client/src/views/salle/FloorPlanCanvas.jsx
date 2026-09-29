@@ -10,68 +10,43 @@ export const FloorPlanCanvas = ({ onSelectTable }) => {
   const [viewMode, setViewMode] = useState('grid'); // 'grid' (smartphone) | 'canvas' (2D Plan)
   const canvasRef = useRef(null);
 
-  // Début du glisser-déposer d'une table
-  const handleDragStart = (e, tableId) => {
+  // Support Pointer Events unifié (Tactile mobile, tablette, stylet et souris)
+  const pointerStartRef = useRef({ startX: 0, startY: 0, initialTableX: 0, initialTableY: 0 });
+
+  const handlePointerDown = (e, table) => {
     if (!isEditMode) return;
-    setDraggedTableId(tableId);
-    e.dataTransfer.setData('text/plain', tableId);
-  };
+    if (e.target.closest('button')) return; // Ne pas déplacer si on clique sur rotation ou suppression
 
-  const handleDragOver = (e) => {
-    if (!isEditMode) return;
-    e.preventDefault();
-  };
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch (err) {}
 
-  const handleDrop = (e) => {
-    if (!isEditMode || !draggedTableId || !canvasRef.current) return;
-    e.preventDefault();
-
-    const rect = canvasRef.current.getBoundingClientRect();
-    const rawX = e.clientX - rect.left - 45; // Centrer sur la table
-    const rawY = e.clientY - rect.top - 45;
-
-    // Magnétisme à la grille (snap-to-grid de 20px)
-    const snapX = Math.max(10, Math.min(rect.width - 100, Math.round(rawX / 20) * 20));
-    const snapY = Math.max(10, Math.min(rect.height - 100, Math.round(rawY / 20) * 20));
-
-    const updated = tables.map(t => {
-      if (t.id === draggedTableId) {
-        return { ...t, positionX: snapX, positionY: snapY };
-      }
-      return t;
-    });
-
-    updateTableLayout(updated);
-    setDraggedTableId(null);
-  };
-
-  // Support tactile natif pour tablettes et smartphones
-  const touchOffsetRef = useRef({ x: 0, y: 0 });
-
-  const handleTouchStart = (e, tableId) => {
-    if (!isEditMode || !canvasRef.current) return;
-    const touch = e.touches[0];
-    const tableEl = e.currentTarget;
-    const rect = tableEl.getBoundingClientRect();
-    touchOffsetRef.current = {
-      x: touch.clientX - rect.left,
-      y: touch.clientY - rect.top
+    setDraggedTableId(table.id);
+    pointerStartRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      initialTableX: table.positionX || 50,
+      initialTableY: table.positionY || 50
     };
-    setDraggedTableId(tableId);
   };
 
-  const handleTouchMove = (e) => {
-    if (!isEditMode || !draggedTableId || !canvasRef.current) return;
-    const touch = e.touches[0];
-    const canvasRect = canvasRef.current.getBoundingClientRect();
-    const rawX = touch.clientX - canvasRect.left - touchOffsetRef.current.x;
-    const rawY = touch.clientY - canvasRect.top - touchOffsetRef.current.y;
+  const handlePointerMove = (e, tableId) => {
+    if (!isEditMode || draggedTableId !== tableId || !canvasRef.current) return;
+    e.preventDefault();
 
+    const deltaX = e.clientX - pointerStartRef.current.startX;
+    const deltaY = e.clientY - pointerStartRef.current.startY;
+
+    const canvasRect = canvasRef.current.getBoundingClientRect();
+    const rawX = pointerStartRef.current.initialTableX + deltaX;
+    const rawY = pointerStartRef.current.initialTableY + deltaY;
+
+    // Magnétisme à la grille (snap-to-grid de 20px) et contraintes limites du canvas
     const snapX = Math.max(10, Math.min(canvasRect.width - 90, Math.round(rawX / 20) * 20));
     const snapY = Math.max(10, Math.min(canvasRect.height - 90, Math.round(rawY / 20) * 20));
 
     const updated = tables.map(t => {
-      if (t.id === draggedTableId) {
+      if (t.id === tableId) {
         return { ...t, positionX: snapX, positionY: snapY };
       }
       return t;
@@ -79,7 +54,11 @@ export const FloorPlanCanvas = ({ onSelectTable }) => {
     updateTableLayout(updated);
   };
 
-  const handleTouchEnd = () => {
+  const handlePointerUp = (e, tableId) => {
+    if (!isEditMode || draggedTableId !== tableId) return;
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch (err) {}
     setDraggedTableId(null);
   };
 
@@ -292,7 +271,10 @@ export const FloorPlanCanvas = ({ onSelectTable }) => {
       {viewMode === 'grid' && (
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Filtres de statut rapides */}
-          <div className="flex gap-1.5 overflow-x-auto pb-2 mb-2 scrollbar-none shrink-0">
+          <div 
+            className="flex gap-1.5 overflow-x-auto pb-2 mb-2 scrollbar-none shrink-0"
+            style={{ touchAction: 'pan-x', WebkitOverflowScrolling: 'touch' }}
+          >
             <button
               onClick={() => setActiveFilter('all')}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
@@ -337,7 +319,10 @@ export const FloorPlanCanvas = ({ onSelectTable }) => {
           </div>
 
           {/* Grille tactile des tables */}
-          <div className="flex-1 overflow-y-auto pr-1 grid grid-cols-2 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5 sm:gap-3 content-start">
+          <div 
+            className="flex-1 overflow-y-auto pr-1 grid grid-cols-2 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5 sm:gap-3 content-start"
+            style={{ touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}
+          >
             {filteredTables.map((table) => {
               const style = getTableStyle(table);
               const isAlarming = activeAlarms.some(a => 
@@ -405,13 +390,12 @@ export const FloorPlanCanvas = ({ onSelectTable }) => {
 
       {/* VUE 2 : CANVAS 2D INTERACTIF (PLAN SPATIAL AVEC GLISSER-DÉPOSER) */}
       {viewMode === 'canvas' && (
-        <div className="flex-1 overflow-auto rounded-2xl border border-slate-800 touch-pan-x touch-pan-y relative bg-slate-950/60">
+        <div 
+          className="flex-1 overflow-auto rounded-2xl border border-slate-800 relative bg-slate-950/60"
+          style={{ touchAction: isEditMode ? 'none' : 'pan-x pan-y', WebkitOverflowScrolling: 'touch' }}
+        >
           <div
             ref={canvasRef}
-            onDragOver={handleDragOver}
-            onDrop={handleDrop}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
             className={`relative min-w-[650px] min-h-[500px] h-full w-full transition-colors ${
               isEditMode
                 ? 'bg-slate-900/60 border-yellow-500/40 bg-[radial-gradient(#334155_1px,transparent_1px)] [background-size:20px_20px]'
@@ -421,7 +405,7 @@ export const FloorPlanCanvas = ({ onSelectTable }) => {
             {isEditMode && (
               <div className="absolute top-3 left-3 bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-xs px-3 py-1.5 rounded-xl font-bold flex items-center gap-2 pointer-events-none z-10 shadow-lg">
                 <Sparkles className="w-4 h-4 animate-spin" />
-                <span>Mode Édition : Déplacez les tables librement</span>
+                <span>Mode Édition : Déplacez les tables librement au doigt ou à la souris</span>
               </div>
             )}
 
@@ -438,9 +422,10 @@ export const FloorPlanCanvas = ({ onSelectTable }) => {
               return (
                 <div
                   key={table.id}
-                  draggable={isEditMode}
-                  onDragStart={(e) => handleDragStart(e, table.id)}
-                  onTouchStart={(e) => handleTouchStart(e, table.id)}
+                  onPointerDown={(e) => handlePointerDown(e, table)}
+                  onPointerMove={(e) => handlePointerMove(e, table.id)}
+                  onPointerUp={(e) => handlePointerUp(e, table.id)}
+                  onPointerCancel={(e) => handlePointerUp(e, table.id)}
                   onClick={() => !isEditMode && onSelectTable(table)}
                   style={{
                     left: `${table.positionX || 50}px`,
@@ -448,9 +433,13 @@ export const FloorPlanCanvas = ({ onSelectTable }) => {
                     width: `${table.width || 90}px`,
                     height: `${table.height || 90}px`,
                     transform: `rotate(${table.rotation || 0}deg)`,
-                    cursor: isEditMode ? 'grab' : 'pointer'
+                    cursor: isEditMode ? (draggedTableId === table.id ? 'grabbing' : 'grab') : 'pointer',
+                    touchAction: isEditMode ? 'none' : 'auto',
+                    userSelect: 'none'
                   }}
-                  className={`absolute flex flex-col items-center justify-center select-none transition-all duration-150 active:scale-95 ${
+                  className={`absolute flex flex-col items-center justify-center select-none transition-all duration-100 ${
+                    draggedTableId === table.id ? 'scale-105 shadow-2xl z-30 ring-4 ring-yellow-400' : 'active:scale-95'
+                  } ${
                     table.shape === 'round' ? 'rounded-full' : 'rounded-2xl'
                   } ${style.bg}`}
                 >

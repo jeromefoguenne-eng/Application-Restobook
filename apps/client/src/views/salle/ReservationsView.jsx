@@ -47,7 +47,10 @@ export const ReservationsView = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col p-3 sm:p-6 bg-slate-950 overflow-y-auto">
+    <div 
+      className="flex-1 flex flex-col p-3 sm:p-6 bg-slate-950 overflow-y-auto"
+      style={{ touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}
+    >
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 sm:pb-4 border-b border-slate-800 mb-4 sm:mb-6">
         <div>
           <h2 className="text-lg sm:text-xl font-bold flex items-center gap-2">

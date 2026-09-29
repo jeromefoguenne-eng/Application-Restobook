@@ -6,9 +6,9 @@ const COMMON_ALLERGENS = [
   'Arachides', 'Soja', 'Fruits à coque', 'Moutarde', 'Sulfites'
 ];
 
-export const MenuItemModal = ({ isOpen, onClose, onSave, itemToEdit, categories }) => {
+export const MenuItemModal = ({ isOpen, onClose, onSave, itemToEdit, categories, defaultCategory, currency }) => {
   const [name, setName] = useState('');
-  const [categoryId, setCategoryId] = useState(categories[0]?.id || 'cat_plats');
+  const [categoryId, setCategoryId] = useState(defaultCategory || categories[0]?.id || 'cat_plats');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('15.00');
   const [vatRate, setVatRate] = useState('10.0');
@@ -19,24 +19,24 @@ export const MenuItemModal = ({ isOpen, onClose, onSave, itemToEdit, categories 
   useEffect(() => {
     if (itemToEdit) {
       setName(itemToEdit.name || '');
-      setCategoryId(itemToEdit.categoryId || categories[0]?.id || 'cat_plats');
+      setCategoryId(itemToEdit.categoryId || defaultCategory || categories[0]?.id || 'cat_plats');
       setDescription(itemToEdit.description || '');
-      setPrice(itemToEdit.price ? itemToEdit.price.toString() : '15.00');
-      setVatRate(itemToEdit.vatRate ? itemToEdit.vatRate.toString() : '10.0');
+      setPrice(itemToEdit.price !== undefined ? itemToEdit.price.toString() : '15.00');
+      setVatRate(itemToEdit.vatRate !== undefined ? itemToEdit.vatRate.toString() : '10.0');
       setAllergens(itemToEdit.allergens || []);
       setHasCookingOption(Boolean(itemToEdit.modifierGroups?.some(g => g.id === 'cuisson')));
-      setIsAvailable(itemToEdit.isAvailable !== false);
+      setIsAvailable(itemToEdit.isAvailable !== false && itemToEdit.available !== false);
     } else {
       setName('');
-      setCategoryId(categories[0]?.id || 'cat_plats');
+      setCategoryId(defaultCategory || categories[0]?.id || 'cat_plats');
       setDescription('');
-      setPrice('15.00');
+      setPrice(currency?.code === 'XOF' ? '1500' : '14.50');
       setVatRate('10.0');
       setAllergens([]);
       setHasCookingOption(false);
       setIsAvailable(true);
     }
-  }, [itemToEdit, isOpen, categories]);
+  }, [itemToEdit, isOpen, categories, defaultCategory, currency]);
 
   if (!isOpen) return null;
 
@@ -63,13 +63,14 @@ export const MenuItemModal = ({ isOpen, onClose, onSave, itemToEdit, categories 
     const payload = {
       ...(itemToEdit ? { id: itemToEdit.id } : {}),
       name: name.trim(),
-      categoryId,
+      categoryId: categoryId || defaultCategory || categories[0]?.id || 'cat_plats',
       description: description.trim(),
       price: parseFloat(price) || 0,
       vatRate: parseFloat(vatRate) || 10,
       allergens,
       modifierGroups,
-      isAvailable
+      isAvailable: Boolean(isAvailable),
+      available: Boolean(isAvailable)
     };
 
     onSave(payload);
@@ -131,15 +132,17 @@ export const MenuItemModal = ({ isOpen, onClose, onSave, itemToEdit, categories 
           {/* Prix et TVA */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-bold text-slate-300 block mb-1.5">Prix TTC (€) * :</label>
+              <label className="text-xs font-bold text-slate-300 block mb-1.5">
+                Prix TTC ({currency?.symbol || '€'}) * :
+              </label>
               <input
                 type="number"
-                step="0.10"
+                step="any"
                 min="0"
                 required
                 value={price}
                 onChange={e => setPrice(e.target.value)}
-                placeholder="14.50"
+                placeholder={currency?.code === 'XOF' ? '1500' : '14.50'}
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm font-mono text-white focus:outline-none focus:border-yellow-500"
               />
             </div>

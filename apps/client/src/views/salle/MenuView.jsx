@@ -21,6 +21,7 @@ export const MenuView = () => {
     updateMenuItem,
     deleteMenuItem,
     toggleItemAvailability,
+    addMenuCategory,
     currency,
     changeCurrency,
     formatPrice,
@@ -29,17 +30,26 @@ export const MenuView = () => {
 
   // Onglet sélectionné : 'cat_entrees' par défaut, ou 'all'
   const [selectedCategoryTab, setSelectedCategoryTab] = useState('cat_entrees');
+  const [defaultCategoryForModal, setDefaultCategoryForModal] = useState('cat_plats');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [itemToEdit, setItemToEdit] = useState(null);
   const [itemToDelete, setItemToDelete] = useState(null);
 
+  // Modal d'ajout de nouvelle catégorie
+  const [isAddCatModalOpen, setIsAddCatModalOpen] = useState(false);
+  const [newCatName, setNewCatName] = useState('');
+  const [newCatIcon, setNewCatIcon] = useState('🍽️');
+
   const handleOpenAdd = (defaultCatId) => {
+    const targetCat = defaultCatId || (selectedCategoryTab !== 'all' ? selectedCategoryTab : (menuCategories[0]?.id || 'cat_plats'));
+    setDefaultCategoryForModal(targetCat);
     setItemToEdit(null);
     setIsModalOpen(true);
   };
 
   const handleOpenEdit = (item) => {
     setItemToEdit(item);
+    setDefaultCategoryForModal(item.categoryId || menuCategories[0]?.id || 'cat_plats');
     setIsModalOpen(true);
   };
 
@@ -48,6 +58,20 @@ export const MenuView = () => {
       updateMenuItem(itemData);
     } else {
       addMenuItem(itemData);
+    }
+  };
+
+  const handleCreateCategory = (e) => {
+    e.preventDefault();
+    if (!newCatName.trim()) return;
+    const created = addMenuCategory({
+      name: newCatName.trim(),
+      icon: newCatIcon.trim() || '🍽️'
+    });
+    setNewCatName('');
+    setIsAddCatModalOpen(false);
+    if (created && created.id) {
+      setSelectedCategoryTab(created.id);
     }
   };
 
@@ -64,7 +88,10 @@ export const MenuView = () => {
     : menuCategories.filter(cat => cat.id === selectedCategoryTab);
 
   return (
-    <div className="flex-1 flex flex-col p-3 sm:p-6 bg-slate-950 overflow-y-auto">
+    <div 
+      className="flex-1 flex flex-col p-3 sm:p-6 bg-slate-950 overflow-y-auto"
+      style={{ touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}
+    >
       {/* En-tête : Titre + Sélecteur de Devise + Bouton Ajouter */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 sm:pb-4 border-b border-slate-800 mb-4 sm:mb-6">
         <div>
@@ -98,6 +125,15 @@ export const MenuView = () => {
             </select>
           </div>
 
+          {/* Bouton Nouvelle Catégorie */}
+          <button
+            onClick={() => setIsAddCatModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 sm:py-2 bg-slate-900 hover:bg-slate-800 text-slate-300 font-bold rounded-2xl text-xs border border-slate-800 transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5 text-yellow-400" />
+            <span>Catégorie</span>
+          </button>
+
           <button
             onClick={() => handleOpenAdd(selectedCategoryTab !== 'all' ? selectedCategoryTab : 'cat_plats')}
             className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-black rounded-2xl text-xs shadow-lg shadow-yellow-500/20 transition-all active:scale-95 whitespace-nowrap"
@@ -109,7 +145,10 @@ export const MenuView = () => {
       </div>
 
       {/* Onglets de séparation claire : Entrées, Plats, Boissons, Desserts */}
-      <div className="flex gap-2 pb-4 overflow-x-auto scrollbar-none border-b border-slate-800/80 mb-6">
+      <div 
+        className="flex gap-2 pb-4 overflow-x-auto scrollbar-none border-b border-slate-800/80 mb-6"
+        style={{ touchAction: 'pan-x', WebkitOverflowScrolling: 'touch' }}
+      >
         {menuCategories.map(cat => {
           const count = menuItems.filter(i => i.categoryId === cat.id).length;
           const isSelected = selectedCategoryTab === cat.id;
@@ -180,7 +219,7 @@ export const MenuView = () => {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {items.map(item => {
-                    const isAvailable = item.isAvailable !== false;
+                    const isAvailable = item.isAvailable !== false && item.available !== false;
                     return (
                       <div
                         key={item.id}
@@ -279,7 +318,74 @@ export const MenuView = () => {
         onSave={handleSave}
         itemToEdit={itemToEdit}
         categories={menuCategories}
+        defaultCategory={defaultCategoryForModal}
+        currency={currency}
       />
+
+      {/* Modal de Création de Catégorie */}
+      {isAddCatModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in">
+          <div className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl text-slate-100">
+            <h3 className="font-bold text-base mb-1 flex items-center gap-2">
+              <span className="text-xl">📁</span>
+              <span>Ajouter une catégorie</span>
+            </h3>
+            <p className="text-xs text-slate-400 mb-4">
+              Créez une nouvelle famille de plats (ex: Pizzas, Vins, Cocktails...)
+            </p>
+
+            <form onSubmit={handleCreateCategory} className="space-y-3">
+              <div>
+                <label className="text-xs font-bold text-slate-300 block mb-1">Nom de la catégorie * :</label>
+                <input
+                  type="text"
+                  required
+                  value={newCatName}
+                  onChange={e => setNewCatName(e.target.value)}
+                  placeholder="Ex: Pâtes & Pizzas"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-yellow-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-300 block mb-1">Icône / Émoji :</label>
+                <div className="flex gap-1.5 flex-wrap">
+                  {['🥗', '🥩', '🍷', '🍰', '🍕', '🍔', '🍺', '☕', '🍲', '🍣', '🍹'].map(emoji => (
+                    <button
+                      key={emoji}
+                      type="button"
+                      onClick={() => setNewCatIcon(emoji)}
+                      className={`text-lg p-1.5 rounded-xl border transition-all ${
+                        newCatIcon === emoji
+                          ? 'bg-yellow-500/20 border-yellow-500 scale-110'
+                          : 'bg-slate-950 border-slate-800 hover:border-slate-700'
+                      }`}
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setIsAddCatModalOpen(false)}
+                  className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-black rounded-xl text-xs shadow-lg shadow-yellow-500/20"
+                >
+                  Créer
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Modal de Confirmation de Suppression */}
       {itemToDelete && (

@@ -22,7 +22,9 @@ export class CloudSyncService {
           if (event.data.channelType === 'accounts') {
             this.notifyAccountCallbacks(event.data.payload);
           } else if (event.data.channelType === 'state') {
-            this.notifyStateCallbacks(event.data.payload);
+            if (event.data.restaurantId && event.data.restaurantId === this.currentRestaurantId) {
+              this.notifyStateCallbacks(event.data.payload);
+            }
           } else {
             this.notifyCallbacks(event.data, 'broadcast');
           }
@@ -74,14 +76,16 @@ export class CloudSyncService {
             return;
           }
 
-          // 2. État persistant du restaurant (retained)
-          if (topic.endsWith('/state')) {
+          // 2. État persistant du restaurant (retained) - strictement pour ce restaurant
+          if (this.stateTopic && topic === this.stateTopic) {
             this.notifyStateCallbacks(parsed);
             return;
           }
 
-          // 3. Événements temps réel (commandes, alarmes, sonnettes)
-          this.notifyCallbacks(parsed, 'mqtt');
+          // 3. Événements temps réel (commandes, alarmes, sonnettes) - strictement pour ce restaurant
+          if (this.eventsTopic && topic === this.eventsTopic) {
+            this.notifyCallbacks(parsed, 'mqtt');
+          }
         } catch (err) {
           console.warn('Erreur lecture message Cloud:', err);
         }
@@ -104,8 +108,18 @@ export class CloudSyncService {
 
   // Connexion à l'espace d'un restaurant spécifique
   connectRestaurant(restaurantId) {
+    if (this.currentRestaurantId === restaurantId && this.eventsTopic && this.stateTopic) {
+      return;
+    }
+    const previousRestoId = this.currentRestaurantId;
     this.currentRestaurantId = restaurantId;
+
     if (this.isConnected && this.client) {
+      if (previousRestoId && (this.eventsTopic || this.stateTopic)) {
+        try {
+          this.client.unsubscribe([this.eventsTopic, this.stateTopic]);
+        } catch (e) {}
+      }
       this.subscribeRestaurantTopics(restaurantId);
     }
   }
@@ -144,7 +158,7 @@ export class CloudSyncService {
 
     if (this.broadcastChannel) {
       try {
-        this.broadcastChannel.postMessage({ channelType: 'state', payload: state });
+        this.broadcastChannel.postMessage({ channelType: 'state', restaurantId, payload: state });
       } catch (e) {}
     }
 
