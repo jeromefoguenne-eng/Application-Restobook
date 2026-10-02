@@ -556,36 +556,45 @@ export const RestobookProvider = ({ children }) => {
 
   const createOrder = (orderData) => {
     const tableId = orderData.tableId;
+    const tableObj = tables.find(t => t.id === tableId || String(t.id) === String(tableId) || String(t.number) === String(tableId));
+    const tableNumber = tableObj?.number || '1';
+
     const newTicket = {
       id: `ticket_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
       orderId: `order_${Date.now()}`,
       tableId,
-      tableNumber: tables.find(t => t.id === tableId)?.number || '1',
+      tableNumber,
       serverName: orderData.serverName || 'Serveur 1',
-      coursePhase: 'plats',
+      coursePhase: orderData.coursePhase || 'plats',
       status: 'waiting',
-      items: orderData.items.map((item, idx) => ({
-        id: `item_${Date.now()}_${idx}`,
-        itemId: item.itemId,
-        name: item.name,
-        quantity: item.quantity,
-        price: item.price,
-        selectedModifiers: item.selectedModifiers || [],
-        customKitchenNote: item.customKitchenNote || '',
-        status: 'pending'
-      })),
+      items: (orderData.items || []).map((item, idx) => {
+        const itemPrice = parseFloat(item.unitPrice ?? item.price ?? 0) || 0;
+        const qty = parseInt(item.quantity, 10) || 1;
+        return {
+          id: `item_${Date.now()}_${idx}`,
+          itemId: item.itemId || item.menuItemId || `menu_${idx}`,
+          name: item.name || 'Article',
+          quantity: qty,
+          price: itemPrice,
+          unitPrice: itemPrice,
+          phase: item.phase || orderData.coursePhase || 'plats',
+          selectedModifiers: item.selectedModifiers || [],
+          customKitchenNote: item.customKitchenNote || '',
+          status: 'pending'
+        };
+      }),
       createdAt: new Date().toISOString()
     };
 
     const updatedTables = tables.map(t => {
-      if (t.id === tableId) {
+      if (t.id === tableId || String(t.id) === String(tableId) || (tableNumber && (t.number === tableNumber || String(t.number) === String(tableNumber)))) {
         return {
           ...t,
           status: 'OCCUPIED',
           currentOrder: {
             id: newTicket.orderId,
             items: newTicket.items,
-            totalAmount: newTicket.items.reduce((s, it) => s + (it.price * it.quantity), 0)
+            totalAmount: newTicket.items.reduce((s, it) => s + (it.unitPrice * it.quantity), 0)
           }
         };
       }
@@ -743,11 +752,11 @@ export const RestobookProvider = ({ children }) => {
   };
 
   const closeTableBill = (tableId, invoiceData = null) => {
-    const tableObj = tables.find(t => t.id === tableId || t.number === tableId);
+    const tableObj = tables.find(t => t.id === tableId || t.number === tableId || String(t.id) === String(tableId) || String(t.number) === String(tableId));
     const tableNum = tableObj?.number;
 
     const updatedTables = tables.map(t => {
-      if (t.id === tableId || t.number === tableId) {
+      if (t.id === tableId || t.number === tableId || String(t.id) === String(tableId) || (tableNum && (t.number === tableNum || String(t.number) === String(tableNum)))) {
         return {
           ...t,
           status: 'free',
@@ -757,12 +766,20 @@ export const RestobookProvider = ({ children }) => {
       return t;
     });
 
-    const updatedTickets = tickets.filter(t => t.tableId !== tableId && t.tableNumber !== tableNum);
+    const isTableTicket = (t) => {
+      if (t.tableId === tableId || String(t.tableId) === String(tableId)) return true;
+      if (tableNum && (t.tableNumber === tableNum || String(t.tableNumber) === String(tableNum))) return true;
+      return false;
+    };
+
+    const updatedTickets = tickets.filter(t => !isTableTicket(t));
     setTickets(updatedTickets);
 
     const updatedAlarms = activeAlarms.filter(a => 
       a.tableId !== tableId && 
+      String(a.tableId) !== String(tableId) &&
       a.tableNumber !== tableId && 
+      String(a.tableNumber) !== String(tableId) &&
       (!tableNum || (a.tableNumber !== tableNum && String(a.tableNumber) !== String(tableNum)))
     );
     setTables(updatedTables);

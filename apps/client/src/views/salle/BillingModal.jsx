@@ -12,12 +12,29 @@ export const BillingModal = ({ table, onClose }) => {
   const [cashGiven, setCashGiven] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
 
-  // Récupérer tous les tickets associés à cette table
-  const tableTickets = tickets.filter(t => t.tableId === table.id);
-  const allItems = tableTickets.flatMap(t => t.items || []);
+  // Récupérer tous les tickets associés à cette table (par ID ou numéro de table)
+  const tableTickets = tickets.filter(t => 
+    t.tableId === table.id || 
+    String(t.tableId) === String(table.id) || 
+    (table.number && (t.tableNumber === table.number || String(t.tableNumber) === String(table.number)))
+  );
 
-  const totalAmount = allItems.reduce((acc, it) => acc + (it.unitPrice || 0) * (it.quantity || 1), 0) || 48.50;
-  const splitAmount = totalAmount / splitCount;
+  // Extraire tous les articles commandés pour la table
+  let allItems = tableTickets.flatMap(t => t.items || []);
+
+  // Sécurité supplémentaire : si la table a un currentOrder avec des articles
+  if (allItems.length === 0 && table.currentOrder?.items?.length > 0) {
+    allItems = [...table.currentOrder.items];
+  }
+
+  // Calcul dynamique et exact du montant total TTC
+  const totalAmount = allItems.reduce((acc, it) => {
+    const unitPrice = parseFloat(it.unitPrice ?? it.price ?? 0) || 0;
+    const qty = parseInt(it.quantity, 10) || 1;
+    return acc + (unitPrice * qty);
+  }, 0);
+
+  const splitAmount = splitCount > 0 ? totalAmount / splitCount : 0;
   const changeToReturn = cashGiven ? Math.max(0, parseFloat(cashGiven) - totalAmount) : 0;
 
   const handleCloseBill = () => {
@@ -34,15 +51,19 @@ export const BillingModal = ({ table, onClose }) => {
     }).format(now);
 
     const itemsSummary = allItems.length > 0
-      ? allItems.map(it => ({
-          name: it.name || it.itemName || 'Consommation',
-          quantity: it.quantity || 1,
-          unitPrice: it.unitPrice || 0,
-          total: (it.unitPrice || 0) * (it.quantity || 1)
-        }))
+      ? allItems.map(it => {
+          const unitPrice = parseFloat(it.unitPrice ?? it.price ?? 0) || 0;
+          const qty = parseInt(it.quantity, 10) || 1;
+          return {
+            name: it.name || it.itemName || 'Consommation',
+            quantity: qty,
+            unitPrice,
+            total: unitPrice * qty
+          };
+        })
       : [
           {
-            name: `Forfait Consommations Table ${table.number}`,
+            name: `Addition Table ${table.number}`,
             quantity: 1,
             unitPrice: totalAmount,
             total: totalAmount
@@ -107,19 +128,30 @@ export const BillingModal = ({ table, onClose }) => {
           style={{ touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}
         >
           {allItems.length > 0 ? (
-            allItems.map((it, idx) => (
-              <div key={idx} className="flex justify-between items-center text-xs py-1 border-b border-slate-800/50">
-                <span className="text-slate-300">
-                  {it.quantity}x {it.name || it.itemName}
-                </span>
-                <span className="font-bold font-mono text-white">
-                  {formatPrice((it.unitPrice || 0) * (it.quantity || 1))}
-                </span>
-              </div>
-            ))
+            allItems.map((it, idx) => {
+              const unitPrice = parseFloat(it.unitPrice ?? it.price ?? 0) || 0;
+              const qty = parseInt(it.quantity, 10) || 1;
+              return (
+                <div key={idx} className="flex justify-between items-center text-xs py-1.5 border-b border-slate-800/50">
+                  <div className="flex flex-col">
+                    <span className="text-slate-200 font-medium">
+                      {qty}x {it.name || it.itemName || 'Consommation'}
+                    </span>
+                    {it.selectedModifiers && it.selectedModifiers.length > 0 && (
+                      <span className="text-[10px] text-slate-400">
+                        {it.selectedModifiers.join(', ')}
+                      </span>
+                    )}
+                  </div>
+                  <span className="font-bold font-mono text-white">
+                    {formatPrice(unitPrice * qty)}
+                  </span>
+                </div>
+              );
+            })
           ) : (
-            <div className="text-xs text-slate-400 text-center py-2">
-              Consommations de la table (Forfait exemple : Entrées & Plats du jour)
+            <div className="text-xs text-slate-400 text-center py-4 bg-slate-950/40 rounded-xl border border-dashed border-slate-800">
+              Aucune commande active enregistrée sur cette table.
             </div>
           )}
         </div>
@@ -228,7 +260,11 @@ export const BillingModal = ({ table, onClose }) => {
             className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-2xl shadow-xl shadow-emerald-600/20 text-xs sm:text-sm transition-all transform active:scale-95"
           >
             <Check className="w-5 h-5" />
-            <span>{isSuccess ? 'Table Clôturée !' : 'Encaisser & Libérer la Table'}</span>
+            <span>
+              {isSuccess 
+                ? (totalAmount > 0 ? 'Table Clôturée !' : 'Table Libérée !') 
+                : (totalAmount > 0 ? 'Encaisser & Libérer la Table' : 'Libérer la Table (0,00 €)')}
+            </span>
           </button>
         </div>
       </div>

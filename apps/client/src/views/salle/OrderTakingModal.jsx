@@ -87,7 +87,9 @@ export const OrderTakingModal = ({ table, onClose, onOpenBilling }) => {
       coursePhase,
       items: cartItems.map(it => ({
         menuItemId: it.id,
+        itemId: it.id,
         name: it.name,
+        price: it.unitPrice,
         unitPrice: it.unitPrice,
         quantity: it.quantity,
         phase: it.phase,
