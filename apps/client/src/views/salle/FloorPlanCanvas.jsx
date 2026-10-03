@@ -1,79 +1,161 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useRestobook } from '../../context/RestobookContext';
-import { Plus, Move, Check, Users, Sparkles, RotateCw, Trash2, LayoutGrid, Map, BellRing } from 'lucide-react';
+import { 
+  Plus, Move, Check, Users, Sparkles, RotateCw, Trash2, LayoutGrid, 
+  Map, BellRing, Settings, AlertTriangle, Magnet, ZoomIn, ZoomOut, 
+  Maximize2, SlidersHorizontal, Edit3 
+} from 'lucide-react';
+import { TableEditModal } from './TableEditModal';
+import { 
+  getNextAvailableTableNumber, 
+  findDuplicateTableNumbers, 
+  fixDuplicateTableNumbers, 
+  autoAlignTables 
+} from '../../utils/tableUtils';
 
 export const FloorPlanCanvas = ({ onSelectTable }) => {
   const { tables, updateTableLayout, deleteTable, activeAlarms } = useRestobook();
   const [isEditMode, setIsEditMode] = useState(false);
-  const [draggedTableId, setDraggedTableId] = useState(null);
   const [activeFilter, setActiveFilter] = useState('all'); // 'all' | 'ready' | 'occupied' | 'free'
-  const [viewMode, setViewMode] = useState('grid'); // 'grid' (smartphone) | 'canvas' (2D Plan)
+  const [viewMode, setViewMode] = useState('canvas'); // 'canvas' (2D Plan) | 'grid' (smartphone)
+  
+  // Options de disposition spatiale
+  const [snapToGrid, setSnapToGrid] = useState(true);
+  const [zoomLevel, setZoomLevel] = useState(1); // 0.75 | 1 | 1.25
+
+  // Modal d'ajout / modification de table
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalTableData, setModalTableData] = useState(null); // null = création, objet = modification
+
+  // Drag & drop ultra-fluide sans lag réseau/localStorage
+  const [dragState, setDragState] = useState(null); // { tableId, currentX, currentY }
   const canvasRef = useRef(null);
+  const dragInfoRef = useRef({
+    tableId: null,
+    startX: 0,
+    startY: 0,
+    initialX: 0,
+    initialY: 0,
+    tableWidth: 90,
+    tableHeight: 90
+  });
 
-  // Support Pointer Events unifié (Tactile mobile, tablette, stylet et souris)
-  const pointerStartRef = useRef({ startX: 0, startY: 0, initialTableX: 0, initialTableY: 0 });
+  // Détection des doublons de numéros
+  const duplicateNumbers = useMemo(() => findDuplicateTableNumbers(tables), [tables]);
 
+  // Correction automatique des doublons
+  const handleFixDuplicates = () => {
+    const fixed = fixDuplicateTableNumbers(tables);
+    updateTableLayout(fixed);
+  };
+
+  // Gestion du Glisser-Déposer global (Window Pointer Events)
   const handlePointerDown = (e, table) => {
     if (!isEditMode) return;
-    if (e.target.closest('button')) return; // Ne pas déplacer si on clique sur rotation ou suppression
+    if (e.target.closest('button')) return; // Ne pas déplacer si clic sur bouton d'action
 
-    try {
-      e.currentTarget.setPointerCapture(e.pointerId);
-    } catch (err) {}
+    e.preventDefault();
+    const tableW = table.width || (table.shape === 'rectangle' ? 140 : 90);
+    const tableH = table.height || 90;
 
-    setDraggedTableId(table.id);
-    pointerStartRef.current = {
+    dragInfoRef.current = {
+      tableId: table.id,
       startX: e.clientX,
       startY: e.clientY,
-      initialTableX: table.positionX || 50,
-      initialTableY: table.positionY || 50
+      initialX: table.positionX || 50,
+      initialY: table.positionY || 50,
+      tableWidth: tableW,
+      tableHeight: tableH
     };
-  };
 
-  const handlePointerMove = (e, tableId) => {
-    if (!isEditMode || draggedTableId !== tableId || !canvasRef.current) return;
-    e.preventDefault();
-
-    const deltaX = e.clientX - pointerStartRef.current.startX;
-    const deltaY = e.clientY - pointerStartRef.current.startY;
-
-    const canvasRect = canvasRef.current.getBoundingClientRect();
-    const rawX = pointerStartRef.current.initialTableX + deltaX;
-    const rawY = pointerStartRef.current.initialTableY + deltaY;
-
-    // Magnétisme à la grille (snap-to-grid de 20px) et contraintes limites du canvas
-    const snapX = Math.max(10, Math.min(canvasRect.width - 90, Math.round(rawX / 20) * 20));
-    const snapY = Math.max(10, Math.min(canvasRect.height - 90, Math.round(rawY / 20) * 20));
-
-    const updated = tables.map(t => {
-      if (t.id === tableId) {
-        return { ...t, positionX: snapX, positionY: snapY };
-      }
-      return t;
+    setDragState({
+      tableId: table.id,
+      currentX: table.positionX || 50,
+      currentY: table.positionY || 50
     });
-    updateTableLayout(updated);
   };
 
-  const handlePointerUp = (e, tableId) => {
-    if (!isEditMode || draggedTableId !== tableId) return;
-    try {
-      e.currentTarget.releasePointerCapture(e.pointerId);
-    } catch (err) {}
-    setDraggedTableId(null);
-  };
+  useEffect(() => {
+    if (!dragState) return;
 
-  // Ajout rapide d'une nouvelle table
-  const handleAddTable = (shape = 'square', capacity = 4) => {
-    const newNumber = (tables.length + 1).toString();
+    const onPointerMove = (e) => {
+      e.preventDefault();
+      const { tableId, startX, startY, initialX, initialY, tableWidth, tableHeight } = dragInfoRef.current;
+      if (!tableId || !canvasRef.current) return;
+
+      const deltaX = (e.clientX - startX) / zoomLevel;
+      const deltaY = (e.clientY - startY) / zoomLevel;
+
+      let rawX = initialX + deltaX;
+      let rawY = initialY + deltaY;
+
+      // Limites de l'espace de salle (Canvas de 1400 x 900 px)
+      const maxX = Math.max(800, canvasRef.current.clientWidth - tableWidth - 10);
+      const maxY = Math.max(600, canvasRef.current.clientHeight - tableHeight - 10);
+
+      let finalX = Math.max(10, Math.min(maxX, rawX));
+      let finalY = Math.max(10, Math.min(maxY, rawY));
+
+      // Magnétisme à la grille (snap 20px) si activé
+      if (snapToGrid) {
+        finalX = Math.round(finalX / 20) * 20;
+        finalY = Math.round(finalY / 20) * 20;
+      } else {
+        finalX = Math.round(finalX);
+        finalY = Math.round(finalY);
+      }
+
+      setDragState({
+        tableId,
+        currentX: finalX,
+        currentY: finalY
+      });
+    };
+
+    const onPointerUp = () => {
+      const { tableId } = dragInfoRef.current;
+      if (tableId && dragState) {
+        // Sauvegarde unique au relâchement final
+        const updated = tables.map(t => {
+          if (t.id === tableId) {
+            return {
+              ...t,
+              positionX: dragState.currentX,
+              positionY: dragState.currentY
+            };
+          }
+          return t;
+        });
+        updateTableLayout(updated);
+      }
+      setDragState(null);
+      dragInfoRef.current.tableId = null;
+    };
+
+    window.addEventListener('pointermove', onPointerMove, { passive: false });
+    window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('pointercancel', onPointerUp);
+
+    return () => {
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+      window.removeEventListener('pointercancel', onPointerUp);
+    };
+  }, [dragState, tables, snapToGrid, zoomLevel, updateTableLayout]);
+
+  // Ajout rapide d'une table avec numéro garanti UNIQUE
+  const handleQuickAddTable = (shape = 'square', capacity = 4) => {
+    const nextNumber = getNextAvailableTableNumber(tables);
+    const offset = (tables.length * 25) % 200;
     const newTable = {
       id: `table_${Date.now()}`,
-      number: newNumber,
+      number: nextNumber,
       zoneId: 'main_hall',
       shape,
       capacity,
-      positionX: 40 + (tables.length * 20) % 200,
-      positionY: 40 + (tables.length * 20) % 200,
-      width: shape === 'rectangle' ? 130 : 90,
+      positionX: 60 + offset,
+      positionY: 60 + offset,
+      width: shape === 'rectangle' ? 140 : (shape === 'round' ? 95 : 90),
       height: 90,
       rotation: 0,
       status: 'free'
@@ -81,6 +163,49 @@ export const FloorPlanCanvas = ({ onSelectTable }) => {
     updateTableLayout([...tables, newTable]);
   };
 
+  // Ouverture du modal pour ajouter une table sur-mesure
+  const handleOpenAddCustomModal = () => {
+    setModalTableData(null);
+    setIsModalOpen(true);
+  };
+
+  // Ouverture du modal pour éditer une table
+  const handleOpenEditTableModal = (table, e) => {
+    e?.stopPropagation();
+    setModalTableData(table);
+    setIsModalOpen(true);
+  };
+
+  // Sauvegarde depuis le modal (Création ou Mise à jour)
+  const handleSaveModalTable = (tableData) => {
+    if (modalTableData) {
+      // Mise à jour de la table existante
+      const updated = tables.map(t => {
+        if (t.id === modalTableData.id) {
+          return {
+            ...t,
+            ...tableData
+          };
+        }
+        return t;
+      });
+      updateTableLayout(updated);
+    } else {
+      // Création d'une nouvelle table
+      const offset = (tables.length * 25) % 200;
+      const newTable = {
+        id: `table_${Date.now()}`,
+        status: 'free',
+        positionX: 60 + offset,
+        positionY: 60 + offset,
+        rotation: 0,
+        ...tableData
+      };
+      updateTableLayout([...tables, newTable]);
+    }
+  };
+
+  // Rotation d'une table (par pas de 45°)
   const rotateTable = (tableId, e) => {
     e?.stopPropagation();
     const updated = tables.map(t => {
@@ -92,6 +217,7 @@ export const FloorPlanCanvas = ({ onSelectTable }) => {
     updateTableLayout(updated);
   };
 
+  // Suppression d'une table avec confirmation de sécurité
   const handleDeleteTable = (table, e) => {
     e?.stopPropagation();
     const hasActiveOrders = table.status === 'occupied' || table.status === 'order_sent' || table.status === 'ready' || table.status === 'bill_requested';
@@ -103,7 +229,16 @@ export const FloorPlanCanvas = ({ onSelectTable }) => {
     deleteTable(table.id);
   };
 
-  // Obtenir la couleur et l'animation selon le statut de la table
+  // Aligner automatiquement toutes les tables
+  const handleAutoAlign = () => {
+    if (!window.confirm('Voulez-vous réorganiser et aligner automatiquement toutes les tables du plan ?')) {
+      return;
+    }
+    const aligned = autoAlignTables(tables, canvasRef.current?.clientWidth || 1000);
+    updateTableLayout(aligned);
+  };
+
+  // Style visuel de la table selon son état
   const getTableStyle = (table) => {
     const isAlarming = activeAlarms.some(a => 
       a.tableId === table.id || 
@@ -114,7 +249,7 @@ export const FloorPlanCanvas = ({ onSelectTable }) => {
 
     if (isAlarming) {
       return {
-        bg: 'bg-red-600 text-white border-2 border-red-300 ring-4 sm:ring-8 ring-red-500/40 animate-pulse-fast shadow-2xl shadow-red-600/60',
+        bg: 'bg-red-600 text-white border-2 border-red-300 ring-4 ring-red-500/40 animate-pulse shadow-2xl shadow-red-600/60',
         badge: 'bg-red-900/80 text-white font-black',
         label: '🚨 PRÊT EN CUISINE !'
       };
@@ -170,31 +305,42 @@ export const FloorPlanCanvas = ({ onSelectTable }) => {
   ).length;
 
   return (
-    <div className="flex flex-col h-full min-h-0 w-full bg-slate-950 p-2 sm:p-4 overflow-hidden">
-      {/* Barre d'outils du plan */}
-      <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 sm:pb-3 border-b border-slate-800 mb-2 sm:mb-3 shrink-0">
+    <div className="flex flex-col h-full min-h-0 w-full bg-slate-950 p-2 sm:p-4 overflow-hidden relative">
+      {/* BANNIÈRE D'ALERTE : DOUBLONS DÉTECTÉS */}
+      {duplicateNumbers.length > 0 && (
+        <div className="mb-2 p-3 bg-red-600/20 border-2 border-red-500/60 rounded-2xl flex flex-wrap items-center justify-between gap-2 shadow-lg animate-in slide-in-from-top shrink-0">
+          <div className="flex items-center gap-2.5 text-xs text-red-200">
+            <AlertTriangle className="w-5 h-5 text-red-400 shrink-0 animate-bounce" />
+            <div>
+              <span className="font-extrabold text-white">Attention : Conflit de numéros en double !</span>
+              <p className="text-[11px] text-red-300">
+                Des tables partagent le même numéro : {duplicateNumbers.map(n => `T${n}`).join(', ')}.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleFixDuplicates}
+            className="px-3.5 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-black shadow-md flex items-center gap-1.5 transition-transform active:scale-95"
+            title="Attribuer des numéros uniques à toutes les tables en double"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Corriger les doublons automatiquement</span>
+          </button>
+        </div>
+      )}
+
+      {/* BARRE D'OUTILS PRINCIPALE */}
+      <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-slate-800 mb-2 shrink-0">
         <div className="flex items-center gap-2 sm:gap-3">
           <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-1.5 sm:gap-2">
-            <span>Tables</span>
+            <span>Plan de Salle</span>
             <span className="text-xs bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full font-normal">
-              {tables.length}
+              {tables.length} tables
             </span>
           </h2>
 
-          {/* Sélecteur Mode Grille / Mode Plan 2D */}
+          {/* Sélecteur Mode Plan 2D / Mode Grille */}
           <div className="flex items-center bg-slate-900 border border-slate-800 p-0.5 rounded-xl">
-            <button
-              onClick={() => setViewMode('grid')}
-              className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
-                viewMode === 'grid'
-                  ? 'bg-yellow-500 text-slate-950 shadow-sm'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-              title="Vue grille tactile rapide (idéale pour smartphone)"
-            >
-              <LayoutGrid className="w-3.5 h-3.5" />
-              <span>Grille</span>
-            </button>
             <button
               onClick={() => setViewMode('canvas')}
               className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
@@ -202,52 +348,125 @@ export const FloorPlanCanvas = ({ onSelectTable }) => {
                   ? 'bg-yellow-500 text-slate-950 shadow-sm'
                   : 'text-slate-400 hover:text-white'
               }`}
-              title="Vue plan de salle 2D avec glisser-déposer"
+              title="Vue spatiale 2D avec positionnement libre des tables"
             >
               <Map className="w-3.5 h-3.5" />
               <span>Plan 2D</span>
             </button>
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                viewMode === 'grid'
+                  ? 'bg-yellow-500 text-slate-950 shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+              title="Vue liste compacte sous forme de tuiles tactiles"
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span>Grille</span>
+            </button>
           </div>
 
-          {/* Légende rapide (masquée sur petit smartphone) */}
-          <div className="hidden xl:flex items-center gap-3 text-xs ml-2 border-l border-slate-800 pl-3">
-            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>Libre</span>
-            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>Occupée</span>
-            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>En Cuisine</span>
-            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping"></span>Prêt (Alarme)</span>
-          </div>
+          {/* Outils spatiaux (visibles en vue Plan 2D) */}
+          {viewMode === 'canvas' && (
+            <div className="hidden md:flex items-center gap-1 bg-slate-900 border border-slate-800 p-0.5 rounded-xl text-xs">
+              {/* Toggle Magnétisme grille */}
+              <button
+                onClick={() => setSnapToGrid(!snapToGrid)}
+                className={`flex items-center gap-1 px-2 py-1 rounded-lg transition-colors ${
+                  snapToGrid ? 'bg-slate-800 text-yellow-400 font-bold' : 'text-slate-400 hover:text-slate-200'
+                }`}
+                title={snapToGrid ? "Magnétisme grille actif (20px)" : "Déplacement libre au pixel près"}
+              >
+                <Magnet className="w-3 h-3" />
+                <span className="text-[11px]">{snapToGrid ? 'Grille 20px' : 'Libre'}</span>
+              </button>
+
+              {/* Contrôles de zoom */}
+              <div className="flex items-center border-l border-slate-800 pl-1 ml-0.5">
+                <button
+                  onClick={() => setZoomLevel(Math.max(0.75, zoomLevel - 0.15))}
+                  className="p-1 hover:bg-slate-800 text-slate-400 hover:text-white rounded"
+                  title="Dézoomer"
+                >
+                  <ZoomOut className="w-3 h-3" />
+                </button>
+                <button
+                  onClick={() => setZoomLevel(1)}
+                  className="px-1.5 py-0.5 text-[10px] text-slate-400 hover:text-white font-mono"
+                  title="Réinitialiser zoom (100%)"
+                >
+                  {Math.round(zoomLevel * 100)}%
+                </button>
+                <button
+                  onClick={() => setZoomLevel(Math.min(1.5, zoomLevel + 0.15))}
+                  className="p-1 hover:bg-slate-800 text-slate-400 hover:text-white rounded"
+                  title="Zoomer"
+                >
+                  <ZoomIn className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Contrôles du mode Édition & Ajout */}
+        {/* Contrôles d'Édition & Création */}
         <div className="flex items-center gap-1.5 sm:gap-2">
           {isEditMode && (
             <div className="flex items-center gap-1 bg-slate-900 border border-slate-800 p-1 rounded-xl">
+              <span className="text-[11px] text-slate-500 font-semibold px-1.5 hidden xl:inline">Ajouter :</span>
               <button
-                onClick={() => handleAddTable('square', 2)}
-                className="px-2 py-1 text-xs font-medium hover:bg-slate-800 text-slate-300 rounded-lg flex items-center gap-0.5"
-                title="Ajouter table 2 couverts"
+                onClick={() => handleQuickAddTable('square', 2)}
+                className="px-2 py-1 text-xs font-semibold hover:bg-slate-800 text-slate-300 rounded-lg flex items-center gap-0.5"
+                title="Ajouter rapidement une table 2 couverts"
               >
-                <Plus className="w-3.5 h-3.5" /> 2
+                <Plus className="w-3.5 h-3.5 text-yellow-400" /> 2 pl.
               </button>
               <button
-                onClick={() => handleAddTable('round', 4)}
-                className="px-2 py-1 text-xs font-medium hover:bg-slate-800 text-slate-300 rounded-lg flex items-center gap-0.5"
-                title="Ajouter table 4 couverts"
+                onClick={() => handleQuickAddTable('round', 4)}
+                className="px-2 py-1 text-xs font-semibold hover:bg-slate-800 text-slate-300 rounded-lg flex items-center gap-0.5"
+                title="Ajouter rapidement une table 4 couverts"
               >
-                <Plus className="w-3.5 h-3.5" /> 4
+                <Plus className="w-3.5 h-3.5 text-yellow-400" /> 4 pl.
               </button>
               <button
-                onClick={() => handleAddTable('rectangle', 6)}
-                className="px-2 py-1 text-xs font-medium hover:bg-slate-800 text-slate-300 rounded-lg flex items-center gap-0.5"
-                title="Ajouter table 6 couverts"
+                onClick={() => handleQuickAddTable('rectangle', 6)}
+                className="px-2 py-1 text-xs font-semibold hover:bg-slate-800 text-slate-300 rounded-lg flex items-center gap-0.5"
+                title="Ajouter rapidement une table 6 couverts"
               >
-                <Plus className="w-3.5 h-3.5" /> 6
+                <Plus className="w-3.5 h-3.5 text-yellow-400" /> 6 pl.
+              </button>
+              <button
+                onClick={handleOpenAddCustomModal}
+                className="px-2.5 py-1 text-xs font-bold bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-300 rounded-lg flex items-center gap-1 border border-yellow-500/30"
+                title="Ajouter une table sur-mesure (choisir numéro, forme, zone...)"
+              >
+                <Sparkles className="w-3 h-3 text-yellow-400" />
+                <span>Sur-mesure</span>
+              </button>
+
+              {/* Bouton Réaligner */}
+              <button
+                onClick={handleAutoAlign}
+                className="px-2 py-1 text-xs font-semibold hover:bg-slate-800 text-slate-400 hover:text-white rounded-lg flex items-center gap-1 border-l border-slate-800 ml-1 pl-2"
+                title="Ranger et aligner proprement toutes les tables"
+              >
+                <SlidersHorizontal className="w-3 h-3" />
+                <span className="hidden lg:inline">Aligner</span>
               </button>
             </div>
           )}
 
+          {/* Bouton bascule Mode Édition */}
           <button
-            onClick={() => setIsEditMode(!isEditMode)}
+            onClick={() => {
+              const nextEdit = !isEditMode;
+              setIsEditMode(nextEdit);
+              // Si on passe en mode édition depuis la grille, basculer automatiquement en Plan 2D pour pouvoir disposer les tables
+              if (nextEdit && viewMode === 'grid') {
+                setViewMode('canvas');
+              }
+            }}
             className={`flex items-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-xl text-xs font-bold transition-all shadow-md shrink-0 ${
               isEditMode
                 ? 'bg-yellow-500 text-slate-950 shadow-yellow-500/20'
@@ -256,20 +475,164 @@ export const FloorPlanCanvas = ({ onSelectTable }) => {
           >
             {isEditMode ? (
               <>
-                <Check className="w-3.5 h-3.5" /> <span>Terminer</span>
+                <Check className="w-3.5 h-3.5 stroke-[3]" /> <span>Terminer l'édition</span>
               </>
             ) : (
               <>
-                <Move className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Modifier plan</span><span className="sm:hidden">Éditer</span>
+                <Move className="w-3.5 h-3.5" /> <span>Disposer & Modifier les tables</span>
               </>
             )}
           </button>
         </div>
       </div>
 
-      {/* VUE 1 : GRILLE TACTILE RAPIDE (OPTIMISÉE SMARTPHONE & SERVICE PRESSÉ) */}
+      {/* VUE 1 : PLAN 2D INTERACTIF (GLISSER-DÉPOSER FLUIDE & POSITIONNEMENT LIBRE) */}
+      {viewMode === 'canvas' && (
+        <div 
+          className="flex-1 min-h-0 overflow-auto rounded-2xl border border-slate-800 relative bg-slate-950/70 pb-20 sm:pb-0 select-none"
+          style={{ touchAction: isEditMode ? 'none' : 'pan-x pan-y', WebkitOverflowScrolling: 'touch' }}
+        >
+          {isEditMode && (
+            <div className="sticky top-2 left-2 z-20 inline-flex items-center gap-2 bg-slate-900/90 border border-yellow-500/40 text-yellow-300 text-xs px-3 py-1.5 rounded-xl font-bold shadow-xl backdrop-blur-md mb-2">
+              <Sparkles className="w-3.5 h-3.5 animate-spin" />
+              <span>Glissez les tables au doigt ou à la souris pour les placer librement dans la salle</span>
+            </div>
+          )}
+
+          <div
+            ref={canvasRef}
+            style={{
+              minWidth: '1200px',
+              minHeight: '800px',
+              transform: `scale(${zoomLevel})`,
+              transformOrigin: 'top left',
+              transition: dragState ? 'none' : 'transform 0.15s ease-out'
+            }}
+            className={`relative w-full h-full p-6 ${
+              isEditMode
+                ? 'bg-slate-900/40 bg-[radial-gradient(#475569_1px,transparent_1px)] [background-size:20px_20px]'
+                : 'bg-slate-900/20 bg-[radial-gradient(#334155_1px,transparent_1px)] [background-size:30px_30px]'
+            }`}
+          >
+            {/* Rendu des tables sur le Plan 2D */}
+            {tables.map((table) => {
+              const isBeingDragged = dragState?.tableId === table.id;
+              const posX = isBeingDragged ? dragState.currentX : (table.positionX || 50);
+              const posY = isBeingDragged ? dragState.currentY : (table.positionY || 50);
+
+              const style = getTableStyle(table);
+              const isAlarming = activeAlarms.some(a => 
+                a.tableId === table.id || 
+                a.tableNumber === table.number || 
+                String(a.tableNumber) === String(table.number) ||
+                String(a.tableId) === String(table.id)
+              ) || table.status === 'ready' || table.status === 'READY_TO_SERVE';
+
+              const isDup = duplicateNumbers.includes(String(table.number).trim());
+
+              return (
+                <div
+                  key={table.id}
+                  onPointerDown={(e) => handlePointerDown(e, table)}
+                  onClick={() => !isEditMode && onSelectTable(table)}
+                  style={{
+                    left: `${posX}px`,
+                    top: `${posY}px`,
+                    width: `${table.width || (table.shape === 'rectangle' ? 140 : 90)}px`,
+                    height: `${table.height || 90}px`,
+                    transform: `rotate(${table.rotation || 0}deg)`,
+                    cursor: isEditMode ? (isBeingDragged ? 'grabbing' : 'grab') : 'pointer',
+                    touchAction: isEditMode ? 'none' : 'auto',
+                    zIndex: isBeingDragged ? 40 : 10
+                  }}
+                  className={`absolute flex flex-col items-center justify-center select-none transition-shadow ${
+                    isBeingDragged 
+                      ? 'scale-105 shadow-2xl ring-4 ring-yellow-400 bg-yellow-500/20' 
+                      : 'hover:scale-[1.02] active:scale-95'
+                  } ${
+                    table.shape === 'round' ? 'rounded-full' : 'rounded-2xl'
+                  } ${style.bg} ${isDup ? 'ring-2 ring-red-400 ring-offset-2 ring-offset-slate-950' : ''}`}
+                >
+                  {/* Boutons d'action en Mode Édition */}
+                  {isEditMode && (
+                    <>
+                      {/* Supprimer */}
+                      <button
+                        onClick={(e) => handleDeleteTable(table, e)}
+                        className="absolute -top-2.5 -left-2.5 p-1.5 bg-red-600 hover:bg-red-500 text-white rounded-full shadow-lg hover:scale-110 active:scale-90 transition-all z-30"
+                        title={`Supprimer la table T${table.number}`}
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+
+                      {/* Modifier numéro & options */}
+                      <button
+                        onClick={(e) => handleOpenEditTableModal(table, e)}
+                        className="absolute -top-2.5 left-6 p-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-full shadow-lg hover:scale-110 active:scale-90 transition-all z-30"
+                        title="Modifier numéro, couverts ou forme"
+                      >
+                        <Edit3 className="w-3 h-3" />
+                      </button>
+
+                      {/* Pivoter */}
+                      <button
+                        onClick={(e) => rotateTable(table.id, e)}
+                        className="absolute -top-2.5 -right-2.5 p-1.5 bg-yellow-500 hover:bg-yellow-400 text-slate-950 rounded-full shadow-lg hover:scale-110 active:scale-90 transition-all z-30"
+                        title="Pivoter à 45°"
+                      >
+                        <RotateCw className="w-3 h-3 stroke-[2.5]" />
+                      </button>
+                    </>
+                  )}
+
+                  {/* Numéro de table */}
+                  <div className="flex items-center gap-0.5">
+                    <span className="text-xl sm:text-2xl font-black font-mono tracking-tight leading-none">
+                      T{table.number}
+                    </span>
+                    {isDup && (
+                      <span className="text-[10px] bg-red-950 text-red-200 border border-red-500 px-1 rounded font-bold" title="Numéro en doublon !">
+                        ⚠️
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Capacité en couverts */}
+                  <div className="flex items-center gap-1 text-[11px] font-semibold opacity-90 mt-0.5">
+                    <Users className="w-3 h-3" />
+                    <span>{table.capacity}</span>
+                  </div>
+
+                  {/* Statut de la table */}
+                  <span className={`text-[9px] px-1.5 py-0.5 rounded-full uppercase tracking-wider font-extrabold mt-1 ${style.badge}`}>
+                    {isAlarming ? 'PRÊT !' : style.label}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* VUE 2 : GRILLE TACTILE RAPIDE */}
       {viewMode === 'grid' && (
         <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+          {/* Notification informative si en mode édition */}
+          {isEditMode && (
+            <div className="mb-2 p-2.5 bg-yellow-500/10 border border-yellow-500/30 rounded-xl flex items-center justify-between text-xs text-yellow-300">
+              <span className="flex items-center gap-1.5 font-medium">
+                <Sparkles className="w-4 h-4 text-yellow-400 shrink-0" />
+                Pour déplacer librement les tables dans la salle, passez sur la vue <strong>Plan 2D</strong>.
+              </span>
+              <button
+                onClick={() => setViewMode('canvas')}
+                className="px-2.5 py-1 bg-yellow-500 text-slate-950 font-bold rounded-lg text-xs shrink-0 ml-2"
+              >
+                Basculer sur Plan 2D
+              </button>
+            </div>
+          )}
+
           {/* Filtres de statut rapides */}
           <div 
             className="flex gap-1.5 overflow-x-auto pb-2 mb-2 scrollbar-none shrink-0"
@@ -332,18 +695,27 @@ export const FloorPlanCanvas = ({ onSelectTable }) => {
                 String(a.tableId) === String(table.id)
               ) || table.status === 'ready' || table.status === 'READY_TO_SERVE';
 
+              const isDup = duplicateNumbers.includes(String(table.number).trim());
+
               return (
                 <div
                   key={table.id}
                   onClick={() => !isEditMode && onSelectTable(table)}
                   className={`relative p-3.5 sm:p-4 rounded-2xl flex flex-col justify-between select-none cursor-pointer transition-all duration-150 active:scale-95 shadow-md ${style.bg} ${
                     isEditMode ? 'ring-2 ring-yellow-400/60' : ''
-                  }`}
+                  } ${isDup ? 'ring-2 ring-red-400' : ''}`}
                   style={{ minHeight: '110px' }}
                 >
-                  {/* Actions en mode édition */}
+                  {/* Actions en Mode Édition */}
                   {isEditMode && (
                     <div className="absolute top-2 right-2 flex items-center gap-1 z-20">
+                      <button
+                        onClick={(e) => handleOpenEditTableModal(table, e)}
+                        className="p-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg shadow-md"
+                        title="Modifier le numéro ou les propriétés"
+                      >
+                        <Edit3 className="w-3 h-3" />
+                      </button>
                       <button
                         onClick={(e) => rotateTable(table.id, e)}
                         className="p-1.5 bg-yellow-500 hover:bg-yellow-400 text-slate-950 rounded-lg shadow-md"
@@ -362,9 +734,12 @@ export const FloorPlanCanvas = ({ onSelectTable }) => {
                   )}
 
                   <div className="flex items-start justify-between">
-                    <span className="text-2xl sm:text-3xl font-black font-mono tracking-tight leading-none">
-                      T{table.number}
-                    </span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-2xl sm:text-3xl font-black font-mono tracking-tight leading-none">
+                        T{table.number}
+                      </span>
+                      {isDup && <span className="text-xs" title="Doublon !">⚠️</span>}
+                    </div>
                     <div className="flex items-center gap-1 text-[11px] font-semibold opacity-90">
                       <Users className="w-3.5 h-3.5" />
                       <span>{table.capacity}</span>
@@ -388,103 +763,15 @@ export const FloorPlanCanvas = ({ onSelectTable }) => {
         </div>
       )}
 
-      {/* VUE 2 : CANVAS 2D INTERACTIF (PLAN SPATIAL AVEC GLISSER-DÉPOSER) */}
-      {viewMode === 'canvas' && (
-        <div 
-          className="flex-1 min-h-0 overflow-auto rounded-2xl border border-slate-800 relative bg-slate-950/60 pb-20 sm:pb-0"
-          style={{ touchAction: isEditMode ? 'none' : 'pan-x pan-y', WebkitOverflowScrolling: 'touch' }}
-        >
-          <div
-            ref={canvasRef}
-            className={`relative min-w-[650px] min-h-[500px] h-full w-full transition-colors ${
-              isEditMode
-                ? 'bg-slate-900/60 border-yellow-500/40 bg-[radial-gradient(#334155_1px,transparent_1px)] [background-size:20px_20px]'
-                : 'bg-slate-900/40'
-            }`}
-          >
-            {isEditMode && (
-              <div className="absolute top-3 left-3 bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-xs px-3 py-1.5 rounded-xl font-bold flex items-center gap-2 pointer-events-none z-10 shadow-lg">
-                <Sparkles className="w-4 h-4 animate-spin" />
-                <span>Mode Édition : Déplacez les tables librement au doigt ou à la souris</span>
-              </div>
-            )}
-
-            {/* Rendu des tables sur le plan 2D */}
-            {tables.map((table) => {
-              const style = getTableStyle(table);
-              const isAlarming = activeAlarms.some(a => 
-                a.tableId === table.id || 
-                a.tableNumber === table.number || 
-                String(a.tableNumber) === String(table.number) ||
-                String(a.tableId) === String(table.id)
-              ) || table.status === 'ready' || table.status === 'READY_TO_SERVE';
-
-              return (
-                <div
-                  key={table.id}
-                  onPointerDown={(e) => handlePointerDown(e, table)}
-                  onPointerMove={(e) => handlePointerMove(e, table.id)}
-                  onPointerUp={(e) => handlePointerUp(e, table.id)}
-                  onPointerCancel={(e) => handlePointerUp(e, table.id)}
-                  onClick={() => !isEditMode && onSelectTable(table)}
-                  style={{
-                    left: `${table.positionX || 50}px`,
-                    top: `${table.positionY || 50}px`,
-                    width: `${table.width || 90}px`,
-                    height: `${table.height || 90}px`,
-                    transform: `rotate(${table.rotation || 0}deg)`,
-                    cursor: isEditMode ? (draggedTableId === table.id ? 'grabbing' : 'grab') : 'pointer',
-                    touchAction: isEditMode ? 'none' : 'auto',
-                    userSelect: 'none'
-                  }}
-                  className={`absolute flex flex-col items-center justify-center select-none transition-all duration-100 ${
-                    draggedTableId === table.id ? 'scale-105 shadow-2xl z-30 ring-4 ring-yellow-400' : 'active:scale-95'
-                  } ${
-                    table.shape === 'round' ? 'rounded-full' : 'rounded-2xl'
-                  } ${style.bg}`}
-                >
-                  {/* Boutons d'action en mode édition : Rotation & Suppression */}
-                  {isEditMode && (
-                    <>
-                      <button
-                        onClick={(e) => handleDeleteTable(table, e)}
-                        className="absolute -top-2 -left-2 p-1.5 bg-red-600 hover:bg-red-500 text-white rounded-full shadow-lg hover:scale-110 active:scale-95 transition-all z-20"
-                        title={`Supprimer la table T${table.number}`}
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
-
-                      <button
-                        onClick={(e) => rotateTable(table.id, e)}
-                        className="absolute -top-2 -right-2 p-1.5 bg-yellow-500 hover:bg-yellow-400 text-slate-950 rounded-full shadow-lg hover:scale-110 active:scale-95 transition-all z-20"
-                        title="Pivoter à 45°"
-                      >
-                        <RotateCw className="w-3 h-3" />
-                      </button>
-                    </>
-                  )}
-
-                  {/* Numéro de table */}
-                  <span className="text-xl font-extrabold tracking-tight">
-                    T{table.number}
-                  </span>
-
-                  {/* Capacité et statut */}
-                  <div className="flex items-center gap-1 text-[11px] font-medium opacity-90 mt-0.5">
-                    <Users className="w-3 h-3" />
-                    <span>{table.capacity}</span>
-                  </div>
-
-                  {/* Badge d'état */}
-                  <span className={`text-[9px] px-1.5 py-0.5 rounded-full uppercase tracking-wider font-bold mt-1 ${style.badge}`}>
-                    {isAlarming ? 'PRÊT !' : style.label}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      {/* MODAL D'AJOUT ET ÉDITION DE TABLE */}
+      <TableEditModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        table={modalTableData}
+        existingTables={tables}
+        onSave={handleSaveModalTable}
+        onDelete={handleDeleteTable}
+      />
     </div>
   );
 };
